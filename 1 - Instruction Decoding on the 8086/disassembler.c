@@ -120,11 +120,10 @@ function void Disassemble(String bytes)
 				DisassemblyError(state, StringLit("Unexpected opcode"));
 			} break;
 		}
+	}
 
-		if (ThereWereDisassemblyErrors(state))
-		{
-			fprintf(stderr, "Disassembly error: %.*s\n", StringExpand(state->error_message));
-			break;
-		}
+	if (ThereWereDisassemblyErrors(state))
+	{
+		fprintf(stderr, "Disassembly error: %.*s\n", StringExpand(state->error_message));
 	}
 }

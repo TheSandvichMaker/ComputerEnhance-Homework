@@ -19,7 +19,7 @@ typedef enum ReadFileError
 	ReadFileError_Other,
 } ReadFileError;
 
-static ReadFileError ReadFileIntoMemory(const char *file_name, void *destination, size_t destination_size, size_t *bytes_read)
+function ReadFileError ReadFileIntoMemory(const char *file_name, void *destination, size_t destination_size, size_t *bytes_read)
 {
 	ReadFileError result = ReadFileError_None;
 
@@ -69,7 +69,7 @@ bail:
 	return result;
 }
 
-static uchar g_bytes[1 << 16];
+global uchar g_bytes[1 << 16];
 
 int main(int argument_count, char **arguments)
 {

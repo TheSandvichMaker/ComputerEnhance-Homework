@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #define function static inline
+#define global   static
 
 typedef unsigned char uchar;
 
