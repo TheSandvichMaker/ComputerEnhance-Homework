@@ -94,6 +94,7 @@ int main(int argument_count, char **arguments)
 		.bytes = g_bytes,
 	};
 
+	printf("; disassembly for %s\n", arguments[1]);
 	Disassemble(bytes);
 
 	return 0;
