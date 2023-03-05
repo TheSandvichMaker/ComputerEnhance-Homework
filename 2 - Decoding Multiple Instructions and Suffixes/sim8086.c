@@ -88,14 +88,15 @@ int main(int argument_count, char **arguments)
 		return 1;
 	}
 
+	String file_name = StringFromCString(arguments[1]);
+
 	String bytes = 
 	{
 		.count = bytes_read,
 		.bytes = g_bytes,
 	};
 
-	printf("; disassembly for %s\n", arguments[1]);
-	Disassemble(bytes);
+	Disassemble(file_name, bytes);
 
 	return 0;
 }

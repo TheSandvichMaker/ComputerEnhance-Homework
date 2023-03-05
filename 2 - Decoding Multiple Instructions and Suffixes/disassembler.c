@@ -36,6 +36,7 @@ function void InitializeOpcodeLookup(void)
 
 typedef struct Disassembler
 {
+	String source_name;
 	String source;
 	u8 *at;
 	u8 *end;
@@ -174,7 +175,7 @@ function void PrintMemoryOperand(u8 r_m, s16 disp)
 	}
 }
 
-function void Disassemble(String bytes)
+function void Disassemble(String source_name, String bytes)
 {
 	if (!opcode_lookup_initialized)
 	{
@@ -182,11 +183,13 @@ function void Disassemble(String bytes)
 	}
 
 	Disassembler *state = &(Disassembler){
-		.source = bytes,
-		.at     = (u8 *)bytes.bytes,
-		.end    = (u8 *)bytes.bytes + bytes.count,
+		.source_name = source_name,
+		.source      = bytes,
+		.at          = (u8 *)bytes.bytes,
+		.end         = (u8 *)bytes.bytes + bytes.count,
 	};
 
+	printf("; disassembly for %.*s\n", StringExpand(state->source_name));
 	printf("bits 16\n");
 
 	while (BytesLeft(state))
