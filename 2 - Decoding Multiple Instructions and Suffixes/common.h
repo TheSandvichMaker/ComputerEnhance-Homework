@@ -47,3 +47,5 @@ function String StringFromCString(const char *c_string)
 #define StringExpand(string) (int)((string).count), (char *)(string).bytes
 #define StringLit(string) (String){ sizeof(string) - 1, (const u8 *)string }
 #define StringLitConst(string) { sizeof(string) - 1, (const u8 *)string }
+
+#define thread_local __declspec(thread)

@@ -8,8 +8,8 @@ typedef enum Opcode
 	Op_MOV_AccumToMem,
 } Opcode;
 
-global bool opcode_lookup_initialized;
-global u8   opcode_lookup[256];
+global thread_local bool opcode_lookup_initialized;
+global thread_local u8   opcode_lookup[256];
 
 function void RegisterOpcode(u8 pattern, u8 pattern_length, Opcode opcode)
 {
