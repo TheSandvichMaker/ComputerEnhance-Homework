@@ -1,0 +1,10 @@
+@echo off
+
+pushd listings
+nasm listing_0037_single_register_mov.asm
+nasm listing_0038_many_register_mov.asm
+nasm listing_0039_more_movs.asm
+nasm listing_0040_challenge_movs.asm
+nasm listing_0041_add_sub_cmp_jnz.asm
+nasm listing_0042_completionist_decode.asm
+popd
