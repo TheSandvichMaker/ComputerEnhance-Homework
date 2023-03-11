@@ -86,143 +86,6 @@ typedef struct Disassembler
 	String error_message;
 } Disassembler;
 
-function void DisassemblyError(Disassembler *state, String message)
-{
-	state->error = true;
-	state->error_message = message;
-}
-
-function bool ThereWereDisassemblyErrors(Disassembler *state)
-{
-	return state->error;
-}
-
-function size_t DsmOutLeft(Disassembler *state)
-{
-	return state->out_end - state->out_at;
-}
-
-function void DsmOutS(Disassembler *state, String string)
-{
-	size_t count_left  = DsmOutLeft(state);
-	size_t count_write = Min(count_left, string.count);
-	for (size_t i = 0; i < count_write; i++)
-	{
-		*state->out_at++ = string.bytes[i];
-	}
-
-	if (count_write < string.count)
-	{
-		DisassemblyError(state, StringLit("Output buffer overflow!"));
-	}
-}
-
-function void DsmOutC(Disassembler *state, char c)
-{
-	if (state->out_at < state->out_end)
-	{
-		*state->out_at++ = (u8)c;
-	}
-	else
-	{
-		DisassemblyError(state, StringLit("Output buffer overflow!"));
-	}
-}
-
-function void DsmOutInt(Disassembler *state, int i)
-{
-	if (i < 0)
-	{
-		DsmOutC(state, '-');
-		i = -i;
-	}
-
-	u8 *start = state->out_at;
-
-	do
-	{
-		int d = i % 10;
-		DsmOutC(state, (char)('0' + d));
-
-		i /= 10;
-	}
-	while (i > 0);
-
-	u8 *end = state->out_at;
-
-	while (start < end)
-	{
-		u8 t = *--end;
-		*end = *start;
-		*start++ = t;
-	}
-}
-
-function void DsmWrite(Disassembler *state, const char *fmt, ...)
-{
-	va_list args;
-	va_start(args, fmt);
-
-	while (*fmt)
-	{
-		char f = *fmt++;
-
-		if (f == '$')
-		{
-			f = *fmt++;
-
-			bool print_positive_sign = false;
-			if (f == '+')
-			{
-				print_positive_sign = true;
-				f = *fmt++;
-			}
-
-			switch (f)
-			{
-				case 'c':
-				{
-					DsmOutC(state, va_arg(args, char));
-				} break;
-
-				case 's':
-				{
-					DsmOutS(state, va_arg(args, String));
-				} break;
-
-				case 'i':
-				{
-					int i = va_arg(args, int);
-					if (print_positive_sign && i >= 0)
-					{
-						DsmOutC(state, '+');
-					}
-					DsmOutInt(state, i);
-				} break;
-
-				case '$':
-				{
-					DsmOutC(state, '$');
-				} break;
-
-				default:
-				{
-					DsmOutC(state, f);
-				} break;
-			}
-		}
-		else
-		{
-			DsmOutC(state, f);
-		}
-
-		if (ThereWereDisassemblyErrors(state))
-		{
-			break;
-		}
-	}
-}
-
 global String register_names[2][8] =
 {
 	// W = 0
@@ -305,6 +168,143 @@ global String jump_mnemonics[2][16] =
 	},
 };
 
+function void DisassemblyError(Disassembler *state, String message)
+{
+	state->error = true;
+	state->error_message = message;
+}
+
+function bool ThereWereDisassemblyErrors(Disassembler *state)
+{
+	return state->error;
+}
+
+function size_t DsmWriteLeft(Disassembler *state)
+{
+	return state->out_end - state->out_at;
+}
+
+function void DsmWriteS(Disassembler *state, String string)
+{
+	size_t count_left  = DsmWriteLeft(state);
+	size_t count_write = Min(count_left, string.count);
+	for (size_t i = 0; i < count_write; i++)
+	{
+		*state->out_at++ = string.bytes[i];
+	}
+
+	if (count_write < string.count)
+	{
+		DisassemblyError(state, StringLit("Output buffer overflow!"));
+	}
+}
+
+function void DsmWriteC(Disassembler *state, char c)
+{
+	if (state->out_at < state->out_end)
+	{
+		*state->out_at++ = (u8)c;
+	}
+	else
+	{
+		DisassemblyError(state, StringLit("Output buffer overflow!"));
+	}
+}
+
+function void DsmWriteInt(Disassembler *state, int i)
+{
+	if (i < 0)
+	{
+		DsmWriteC(state, '-');
+		i = -i;
+	}
+
+	u8 *start = state->out_at;
+
+	do
+	{
+		int d = i % 10;
+		DsmWriteC(state, (char)('0' + d));
+
+		i /= 10;
+	}
+	while (i > 0);
+
+	u8 *end = state->out_at;
+
+	while (start < end)
+	{
+		u8 t = *--end;
+		*end = *start;
+		*start++ = t;
+	}
+}
+
+function void DsmWrite(Disassembler *state, const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+
+	while (*fmt)
+	{
+		char f = *fmt++;
+
+		if (f == '%')
+		{
+			f = *fmt++;
+
+			bool print_positive_sign = false;
+			if (f == '+')
+			{
+				print_positive_sign = true;
+				f = *fmt++;
+			}
+
+			switch (f)
+			{
+				case 'c':
+				{
+					DsmWriteC(state, va_arg(args, char));
+				} break;
+
+				case 's':
+				{
+					DsmWriteS(state, va_arg(args, String));
+				} break;
+
+				case 'i':
+				{
+					int i = va_arg(args, int);
+					if (print_positive_sign && i >= 0)
+					{
+						DsmWriteC(state, '+');
+					}
+					DsmWriteInt(state, i);
+				} break;
+
+				case '%':
+				{
+					DsmWriteC(state, '%');
+				} break;
+
+				default:
+				{
+					DsmWriteC(state, f);
+				} break;
+			}
+		}
+		else
+		{
+			DsmWriteC(state, f);
+		}
+
+		if (ThereWereDisassemblyErrors(state))
+		{
+			break;
+		}
+	}
+}
+
 function bool BytesLeft(Disassembler *state)
 {
 	if (state->error)
@@ -377,11 +377,11 @@ function void PrintMemoryOperand(Disassembler *state, u8 r_m, s16 disp)
 
 	if (disp)
 	{
-		DsmWrite(state, "[$s $c $i]", mem_string, disp >= 0 ? '+' : '-', disp >= 0 ? disp : -disp);
+		DsmWrite(state, "[%s %c %i]", mem_string, disp >= 0 ? '+' : '-', disp >= 0 ? disp : -disp);
 	}
 	else
 	{
-		DsmWrite(state, "[$s]", mem_string);
+		DsmWrite(state, "[%s]", mem_string);
 	}
 }
 
@@ -402,8 +402,8 @@ function String Disassemble(DisassembleParams *params)
 		.out_end     = params->output + params->output_capacity,
 	};
 
-	DsmWrite(state, "; disassembly for $s\n", state->source_name);
-	DsmOutS(state, StringLit("bits 16\n"));
+	DsmWrite(state, "; disassembly for %s\n", state->source_name);
+	DsmWriteS(state, StringLit("bits 16\n"));
 
 	while (BytesLeft(state))
 	{
@@ -440,7 +440,7 @@ function String Disassemble(DisassembleParams *params)
 					String dst_string = register_names[w][dst];
 					String src_string = register_names[w][src];
 
-					DsmWrite(state, "mov $s, $s\n", dst_string, src_string);
+					DsmWrite(state, "mov %s, %s\n", dst_string, src_string);
 				}
 				else
 				{
@@ -448,7 +448,7 @@ function String Disassemble(DisassembleParams *params)
 
 					String reg_string = register_names[w][reg];
 
-					DsmOutS(state, StringLit("mov "));
+					DsmWriteS(state, StringLit("mov "));
 
 					if (mod == 0x0 &&
 						r_m == 0x6)
@@ -460,11 +460,11 @@ function String Disassemble(DisassembleParams *params)
 
 						if (d)
 						{
-							DsmWrite(state, "$s, [$i]", reg_string, disp);
+							DsmWrite(state, "%s, [%i]", reg_string, disp);
 						}
 						else
 						{
-							DsmWrite(state, "[$i], $s", disp, StringExpand(reg_string));
+							DsmWrite(state, "[%i], %s", disp, StringExpand(reg_string));
 						}
 					}
 					else
@@ -473,17 +473,17 @@ function String Disassemble(DisassembleParams *params)
 
 						if (d)
 						{
-							DsmWrite(state, "$s, ", reg_string);
+							DsmWrite(state, "%s, ", reg_string);
 							PrintMemoryOperand(state, r_m, disp);
 						}
 						else
 						{
 							PrintMemoryOperand(state, r_m, disp);
-							DsmWrite(state, ", $s", reg_string);
+							DsmWrite(state, ", %s", reg_string);
 						}
 					}
 
-					DsmOutC(state, '\n');
+					DsmWriteC(state, '\n');
 				}
 			} break;
 
@@ -501,26 +501,26 @@ function String Disassemble(DisassembleParams *params)
 				s16 disp = ReadDisp(state, mod);
 				s16 data = ReadSx(state, w);
 
-				DsmOutS(state, StringLit("mov "));
+				DsmWriteS(state, StringLit("mov "));
 
 				if (mod == 0x3)
 				{
 					String reg_string = register_names[w][r_m];
-					DsmWrite(state, "$s, ", reg_string);
+					DsmWrite(state, "%s, ", reg_string);
 				}
 				else
 				{
 					PrintMemoryOperand(state, r_m, disp);
-					DsmOutS(state, StringLit(", "));
+					DsmWriteS(state, StringLit(", "));
 				}
 
 				if (w)
 				{
-					DsmWrite(state, "word $i\n", data);
+					DsmWrite(state, "word %i\n", data);
 				}
 				else
 				{
-					DsmWrite(state, "byte $i\n", data);
+					DsmWrite(state, "byte %i\n", data);
 				}
 			} break;
 
@@ -537,11 +537,11 @@ function String Disassemble(DisassembleParams *params)
 
 				if (data < 0)
 				{
-					DsmWrite(state, "mov $s, $i ; $i\n", reg_string, data, (u16)data);
+					DsmWrite(state, "mov %s, %i ; %i\n", reg_string, data, (u16)data);
 				}
 				else
 				{
-					DsmWrite(state, "mov $s, $i\n", reg_string, data);
+					DsmWrite(state, "mov %s, %i\n", reg_string, data);
 				}
 			} break;
 
@@ -553,7 +553,7 @@ function String Disassemble(DisassembleParams *params)
 
 				u16 addr = ReadU16(state);
 
-				DsmWrite(state, "mov $s, [$i]\n", w ? StringLit("ax") : StringLit("al"), addr);
+				DsmWrite(state, "mov %s, [%i]\n", w ? StringLit("ax") : StringLit("al"), addr);
 			} break;
 
 			case Op_MOV_AccumToMem:
@@ -564,7 +564,7 @@ function String Disassemble(DisassembleParams *params)
 
 				u16 addr = ReadU16(state);
 
-				DsmWrite(state, "mov [$i], $s\n", addr, w ? StringLit("ax") : StringLit("al"));
+				DsmWrite(state, "mov [%i], %s\n", addr, w ? StringLit("ax") : StringLit("al"));
 			} break;
 
 			//
@@ -587,7 +587,7 @@ function String Disassemble(DisassembleParams *params)
 				u8 reg = (b2 >> 3) & 0x7;
 				u8 r_m = (b2 >> 0) & 0x7;
 
-				DsmWrite(state, "$s ", op_string);
+				DsmWrite(state, "%s ", op_string);
 
 				if (mod == 0x3)
 				{
@@ -599,7 +599,7 @@ function String Disassemble(DisassembleParams *params)
 					String dst_string = register_names[w][dst];
 					String src_string = register_names[w][src];
 
-					DsmWrite(state, "$s, $s\n", dst_string, src_string);
+					DsmWrite(state, "%s, %s\n", dst_string, src_string);
 				}
 				else
 				{
@@ -617,11 +617,11 @@ function String Disassemble(DisassembleParams *params)
 
 						if (d)
 						{
-							DsmWrite(state, "$s, [$i]", reg_string, disp);
+							DsmWrite(state, "%s, [%i]", reg_string, disp);
 						}
 						else
 						{
-							DsmWrite(state, "[$i], %s", disp, reg_string);
+							DsmWrite(state, "[%i], %s", disp, reg_string);
 						}
 					}
 					else
@@ -630,17 +630,17 @@ function String Disassemble(DisassembleParams *params)
 
 						if (d)
 						{
-							DsmWrite(state, "$s, ", reg_string);
+							DsmWrite(state, "%s, ", reg_string);
 							PrintMemoryOperand(state, r_m, disp);
 						}
 						else
 						{
 							PrintMemoryOperand(state, r_m, disp);
-							DsmWrite(state, ", $s", reg_string);
+							DsmWrite(state, ", %s", reg_string);
 						}
 					}
 
-					DsmOutC(state, '\n');
+					DsmWriteC(state, '\n');
 				}
 			} break;
 
@@ -661,12 +661,12 @@ function String Disassemble(DisassembleParams *params)
 				u8 mod = (b2 >> 6) & 0x3;
 				u8 r_m = (b2 >> 0) & 0x7;
 
-				DsmWrite(state, "$s ", op_name);
+				DsmWrite(state, "%s ", op_name);
 
 				if (mod == 0x3)
 				{
 					String reg_string = register_names[w][r_m];
-					DsmWrite(state, "$s, ", reg_string);
+					DsmWrite(state, "%s, ", reg_string);
 				}
 				else
 				{
@@ -676,14 +676,14 @@ function String Disassemble(DisassembleParams *params)
 						// Direct address
 
 						u16 disp = ReadU16(state);
-						DsmWrite(state, "[$i], ", disp);
+						DsmWrite(state, "[%i], ", disp);
 					}
 					else
 					{
 						s16 disp = ReadDisp(state, mod);
 
 						PrintMemoryOperand(state, r_m, disp);
-						DsmOutS(state, StringLit(", "));
+						DsmWriteS(state, StringLit(", "));
 					}
 				}
 
@@ -700,11 +700,11 @@ function String Disassemble(DisassembleParams *params)
 				// TODO(daniel): When do we actually care to print word/byte explicitly?
 				if (w)
 				{
-					DsmWrite(state, "word $i\n", data);
+					DsmWrite(state, "word %i\n", data);
 				}
 				else
 				{
-					DsmWrite(state, "byte $i\n", data);
+					DsmWrite(state, "byte %i\n", data);
 				}
 			} break;
 
@@ -717,7 +717,7 @@ function String Disassemble(DisassembleParams *params)
 
 				s16 data = ReadSx(state, w);
 
-				DsmWrite(state, "$s $s, $i\n", op_string, w ? StringLit("ax") : StringLit("al"), data);
+				DsmWrite(state, "%s %s, %i\n", op_string, w ? StringLit("ax") : StringLit("al"), data);
 			} break;
 
 			//
@@ -730,7 +730,7 @@ function String Disassemble(DisassembleParams *params)
 
 				int mnemonic_pattern_shift = (b1 >> 4) == 0b1110;
 				String mnemonic = jump_mnemonics[mnemonic_pattern_shift][b1 & 15];
-				DsmWrite(state, "$s $$$+i\n", mnemonic, ip_inc8 + 2);
+				DsmWrite(state, "%s $%+i\n", mnemonic, ip_inc8 + 2);
 			} break;
 
 			//
