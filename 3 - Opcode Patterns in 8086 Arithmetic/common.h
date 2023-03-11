@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdarg.h>
 
 #define function static inline
 #define global   static
@@ -47,5 +48,8 @@ function String StringFromCString(const char *c_string)
 #define StringExpand(string) (int)((string).count), (char *)(string).bytes
 #define StringLit(string) (String){ sizeof(string) - 1, (const u8 *)string }
 #define StringLitConst(string) { sizeof(string) - 1, (const u8 *)string }
+
+#define Min(a, b) ((a) < (b) ? (a) : (b))
+#define Max(a, b) ((a) > (b) ? (a) : (b))
 
 #define thread_local __declspec(thread)

@@ -69,7 +69,8 @@ bail:
 	return result;
 }
 
-global u8 g_bytes[1 << 16];
+global u8 g_input [1 << 16];
+global u8 g_output[1 << 16];
 
 int main(int argument_count, char **arguments)
 {
@@ -81,7 +82,7 @@ int main(int argument_count, char **arguments)
 
 	size_t bytes_read = 0;
 
-	ReadFileError error = ReadFileIntoMemory(arguments[1], g_bytes, sizeof(g_bytes), &bytes_read);
+	ReadFileError error = ReadFileIntoMemory(arguments[1], g_input, sizeof(g_input), &bytes_read);
 	if (error != ReadFileError_None)
 	{
 		fprintf(stderr, "Failed to read file '%s' into memory!\n", arguments[1]);
@@ -90,13 +91,20 @@ int main(int argument_count, char **arguments)
 
 	String file_name = StringFromCString(arguments[1]);
 
-	String bytes = 
+	String input = 
 	{
 		.count = bytes_read,
-		.bytes = g_bytes,
+		.bytes = g_input,
 	};
 
-	Disassemble(file_name, bytes);
+	String result = Disassemble(&(DisassembleParams){
+		.input_name      = file_name,
+		.input           = input,
+		.output          = g_output,
+		.output_capacity = sizeof(g_output),
+	});
+
+	printf("%.*s", StringExpand(result));
 
 	return 0;
 }
