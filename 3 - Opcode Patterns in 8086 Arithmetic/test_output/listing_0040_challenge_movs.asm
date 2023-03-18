@@ -1,4 +1,4 @@
-; disassembly for listings\listing_0040_challenge_movs
+; disassembly for .*s
 bits 16
 mov ax, [bx + di - 37]
 mov [si - 300], cx

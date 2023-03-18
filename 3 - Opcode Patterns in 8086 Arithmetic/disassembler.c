@@ -1,74 +1,194 @@
-typedef enum Opcode
+typedef u8 Instruction;
+enum Instruction
 {
-	Op_INVALID,
+	Inst_None,
 
-	Op_MOV_RegMemToFromReg,
-	Op_MOV_ImmToRegMem,
-	Op_MOV_ImmToReg,
-	Op_MOV_MemToAccum,
-	Op_MOV_AccumToMem,
+	ADD,
+	MOV,
+	OR,
+	ADC,
+	SBB,
+	AND,
+	SUB,
+	XOR,
+	CMP,
 
-	Op_Common_RegMemToFromReg,
-	Op_Common_ImmToRegMem,
-	Op_Common_ImmToAccum,
+	JO,
+	JNO,
+	JB,
+	JAE,
+	JE,
+	JNE,
+	JBE,
+	JA,
+	JS,
+	JNS,
+	JP,
+	JPO,
+	JL,
+	JGE,
+	JLE,
+	JG,
 
-	Op_JumpIpInc8,
-} Opcode;
+	LOOPNE,
+	LOOPE,
+	LOOP,
+	JCXZ,
 
-global thread_local bool opcode_lookup_initialized;
-global thread_local u8   opcode_lookup[256];
+	Inst_Count,
+};
 
-function void RegisterOpcode(u8 pattern, u8 fill_mask, Opcode opcode)
+global String mnemonics[Inst_Count] =
 {
-	opcode_lookup[pattern] = opcode;
+	[Inst_None] = StringLitConst("inst_none"),
+
+	[ADD]    = StringLitConst("add"),
+	[MOV]    = StringLitConst("mov"),
+	[OR]     = StringLitConst("or"),
+	[ADC]    = StringLitConst("adc"),
+	[SBB]    = StringLitConst("sbb"),
+	[AND]    = StringLitConst("and"),
+	[SUB]    = StringLitConst("sub"),
+	[XOR]    = StringLitConst("xor"),
+	[CMP]    = StringLitConst("cmp"),
+
+	[JO]     = StringLitConst("jo"),
+	[JNO]    = StringLitConst("jno"),
+	[JB]     = StringLitConst("jb"),
+	[JAE]    = StringLitConst("jae"),
+	[JE]     = StringLitConst("je"),
+	[JNE]    = StringLitConst("jne"),
+	[JBE]    = StringLitConst("jbe"),
+	[JA]     = StringLitConst("ja"),
+	[JS]     = StringLitConst("js"),
+	[JNS]    = StringLitConst("jns"),
+	[JP]     = StringLitConst("jp"),
+	[JPO]    = StringLitConst("jpo"),
+	[JL]     = StringLitConst("jl"),
+	[JGE]    = StringLitConst("jge"),
+	[JLE]    = StringLitConst("jle"),
+	[JG]     = StringLitConst("jg"),
+
+	[LOOPNE] = StringLitConst("loopne"),
+	[LOOPE]  = StringLitConst("loope"),
+	[LOOP]   = StringLitConst("loop"),
+	[JCXZ]   = StringLitConst("jcxz"),
+};
+
+typedef u8 Flags;
+enum Flags
+{
+	S = 1 << 0,
+	W = 1 << 1,
+	D = 1 << 2,
+	V = 1 << 3,
+	Z = 1 << 4,
+
+	InstructionFlag_HasData = 1 << 5,
+};
+
+typedef u8 DecoderKind;
+enum DecoderKind
+{
+	Decoder_INVALID,
+
+	Decoder_MOV_MemToAccum,
+	Decoder_MOV_AccumToMem,
+	Decoder_RegMemToFromReg,
+	Decoder_ImmToRegMem,
+	Decoder_ImmToReg,
+	Decoder_ImmToAccum,
+	Decoder_JumpIpInc8,
+};
+
+typedef u8 DecoderFlags;
+enum DecoderFlags
+{
+	DecoderFlag_HasS = 1 << 0,
+};
+
+typedef struct Decoder
+{
+	DecoderKind kind;
+	DecoderFlags flags;
+} Decoder;
+
+global thread_local bool decoder_table_initialized;
+global thread_local Decoder decoders[256];
+global thread_local u8 instruction_kinds[256];
+
+typedef struct Pattern
+{
+	u8 b1, b1_mask;
+	Instruction inst;
+	DecoderKind decoder;
+	Flags decode_flags;
+} Pattern;
+
+function void RegisterPattern(Pattern *pattern)
+{
+	decoders[pattern->b1].kind = pattern->decoder;
+	decoders[pattern->b1].flags = pattern->decode_flags;
+	instruction_kinds[pattern->b1] = pattern->inst;
 
 	// TODO(daniel): Figure out a way to not have to iterate all possible bit patterns for the fill
 	for (u64 fill_pattern = 0; fill_pattern < 256; fill_pattern++)
 	{
-		u8 fill = (fill_pattern & fill_mask);
+		u8 fill = (fill_pattern & ~pattern->b1_mask);
 		if (fill != 0)
 		{
-			u8 lookup_pattern = (u8)(pattern|fill);
-			opcode_lookup[lookup_pattern] = opcode;
+			u8 lookup_pattern = (u8)(pattern->b1|fill);
+			decoders[lookup_pattern].kind = pattern->decoder;
+			decoders[lookup_pattern].flags = pattern->decode_flags;
+			instruction_kinds[lookup_pattern] = pattern->inst;
 		}
 	}
 }
 
-function void InitializeOpcodeLookup(void)
+global Pattern patterns[] =
 {
-	//
-	// MOV:
-	//
+	{ .b1 = 0b10001000, .b1_mask = 0b11111100, .inst = MOV, .decoder = Decoder_RegMemToFromReg },
+	{ .b1 = 0b11000110, .b1_mask = 0b11111110, .inst = MOV, .decoder = Decoder_ImmToRegMem     },
+	{ .b1 = 0b10110000, .b1_mask = 0b11110000, .inst = MOV, .decoder = Decoder_ImmToReg        },
+	{ .b1 = 0b10100000, .b1_mask = 0b11111110, .inst = MOV, .decoder = Decoder_MOV_MemToAccum  },
+	{ .b1 = 0b10100010, .b1_mask = 0b11111110, .inst = MOV, .decoder = Decoder_MOV_AccumToMem  },
 
-	RegisterOpcode(0b10001000, 0b00000011, Op_MOV_RegMemToFromReg);
-	RegisterOpcode(0b11000110, 0b00000001, Op_MOV_ImmToRegMem);
-	RegisterOpcode(0b10110000, 0b00001111, Op_MOV_ImmToReg);
-	RegisterOpcode(0b10100000, 0b00000001, Op_MOV_MemToAccum);
-	RegisterOpcode(0b10100010, 0b00000001, Op_MOV_AccumToMem);
+	// Immed group
+	{ .b1 = 0b00000000, .b1_mask = 0b11000100, .decoder = Decoder_RegMemToFromReg },
+	{ .b1 = 0b10000000, .b1_mask = 0b11111100, .decoder = Decoder_ImmToRegMem, .decode_flags = DecoderFlag_HasS },
+	{ .b1 = 0b00000100, .b1_mask = 0b11000110, .decoder = Decoder_ImmToAccum      },
 
-	//
-	// Shared between ADD, OR, ADC, SBB, AND, SUB, XOR, CMP:
-	//
+	{ .b1 = 0b01110000, .inst = JO,  .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b01110001, .inst = JNO, .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b01110010, .inst = JB,  .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b01110011, .inst = JAE, .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b01110100, .inst = JE,  .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b01110101, .inst = JNE, .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b01110110, .inst = JBE, .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b01110111, .inst = JA,  .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b01111000, .inst = JS,  .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b01111001, .inst = JNS, .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b01111010, .inst = JP,  .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b01111011, .inst = JPO, .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b01111100, .inst = JL,  .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b01111101, .inst = JGE, .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b01111110, .inst = JLE, .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b01111111, .inst = JG,  .decoder = Decoder_JumpIpInc8 },
 
-	RegisterOpcode(0b00000000, 0b00111011, Op_Common_RegMemToFromReg);
-	RegisterOpcode(0b10000000, 0b00000011, Op_Common_ImmToRegMem);
-	RegisterOpcode(0b00000100, 0b00111001, Op_Common_ImmToAccum);
+	{ .b1 = 0b11100000, .inst = LOOPNE, .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b11100001, .inst = LOOPE,  .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b11100010, .inst = LOOP,   .decoder = Decoder_JumpIpInc8 },
+	{ .b1 = 0b11100011, .inst = JCXZ,   .decoder = Decoder_JumpIpInc8 },
+};
 
-	//
-	//
-	//
+function void InitializeDecoderTable(void)
+{
+	for (u64 i = 0; i < ArrayCount(patterns); i++)
+	{
+		RegisterPattern(&patterns[i]);
+	}
 
-	RegisterOpcode(0b01110000, 0b00001111, Op_JumpIpInc8);
-	RegisterOpcode(0b11100000, 0b00000011, Op_JumpIpInc8);
-	// RegisterOpcode(0b11101001, 0b00000000, Op_JumpOrLoop);
-	// RegisterOpcode(0b11101010, 0b00000000, Op_JumpOrLoop);
-	// RegisterOpcode(0b11101011, 0b00000000, Op_JumpIpInc8);
-	
-	//
-	//
-	//
-
-	opcode_lookup_initialized = true;
+	decoder_table_initialized = true;
 }
 
 typedef struct Disassembler
@@ -86,92 +206,149 @@ typedef struct Disassembler
 	String error_message;
 } Disassembler;
 
-global String register_names[2][8] =
+typedef u8 Register;
+enum Register
 {
-	// W = 0
-	{
-		StringLitConst("al"),
-		StringLitConst("cl"),
-		StringLitConst("dl"),
-		StringLitConst("bl"),
-		StringLitConst("ah"),
-		StringLitConst("ch"),
-		StringLitConst("dh"),
-		StringLitConst("bh"),
-	},
-
-	// W = 1
-	{
-		StringLitConst("ax"),
-		StringLitConst("cx"),
-		StringLitConst("dx"),
-		StringLitConst("bx"),
-		StringLitConst("sp"),
-		StringLitConst("bp"),
-		StringLitConst("si"),
-		StringLitConst("di"),
-	},
+	Reg_None,
+	AL, CL, DL, BL, AH, CH, DH, BH,
+	AX, CX, DX, BX, SP, BP, SI, DI,
 };
 
-global String effective_address_calculations[8] =
+global String register_names[] =
 {
-	StringLitConst("bx + si"),
-	StringLitConst("bx + di"),
-	StringLitConst("bp + si"),
-	StringLitConst("bp + di"),
+	StringLitConst("Invalid Register"),
+
+	StringLitConst("al"),
+	StringLitConst("cl"),
+	StringLitConst("dl"),
+	StringLitConst("bl"),
+	StringLitConst("ah"),
+	StringLitConst("ch"),
+	StringLitConst("dh"),
+	StringLitConst("bh"),
+
+	StringLitConst("ax"),
+	StringLitConst("cx"),
+	StringLitConst("dx"),
+	StringLitConst("bx"),
+	StringLitConst("sp"),
+	StringLitConst("bp"),
 	StringLitConst("si"),
 	StringLitConst("di"),
-	StringLitConst("bp"),
-	StringLitConst("bx"),
 };
 
-global String common_instruction_patterns[] =
+typedef struct EffectiveAddress
 {
-	[0b000] = StringLitConst("add"),
-	[0b001] = StringLitConst("or"),
-	[0b010] = StringLitConst("adc"),
-	[0b011] = StringLitConst("sbb"),
-	[0b100] = StringLitConst("and"),
-	[0b101] = StringLitConst("sub"),
-	[0b110] = StringLitConst("xor"),
-	[0b111] = StringLitConst("cmp"),
+	Register reg1;
+	Register reg2;
+	s16 disp;
+} EffectiveAddress;
+
+typedef struct RegisterPair
+{
+	Register reg1, reg2;
+} RegisterPair;
+
+global RegisterPair eac_register_table[] = 
+{
+	{ BX, SI },
+	{ BX, DI },
+	{ BP, SI },
+	{ BP, DI },
+	{ SI },
+	{ DI },
+	{ BP },
+	{ BX },
 };
 
-global String jump_mnemonics[2][16] =
+typedef u8 OperandKind;
+enum OperandKind
 {
-	{
-		// 0111 ones
-		StringLitConst("jo"),
-		StringLitConst("jno"),
-		StringLitConst("jb"),  
-		StringLitConst("jnb"), 
-		StringLitConst("je"),  
-		StringLitConst("jne"),  
-		StringLitConst("jbe"),  
-		StringLitConst("jnbe"),  
-		StringLitConst("js"),  
-		StringLitConst("jns"),  
-		StringLitConst("jp"),  
-		StringLitConst("jnp"),  
-		StringLitConst("jl"),  
-		StringLitConst("jnl"),  
-		StringLitConst("jle"),  
-		StringLitConst("jnle"),  
-	},
+	Operand_Reg,
+	Operand_Mem,
+};
 
+typedef struct Operand
+{
+	OperandKind kind;
+	union
 	{
-		// 1110 ones
-		StringLitConst("loopnz"),
-		StringLitConst("loopz"),
-		StringLitConst("loop"),
-		StringLitConst("jcxz"),
-	},
+		Register reg;
+		EffectiveAddress mem;
+	};
+} Operand;
+
+function Operand DecodeRegister(u8 w, u8 reg)
+{
+	Operand result =
+	{
+		.kind = Operand_Reg,
+		.reg  = w ? AX + reg : AL + reg,
+	};
+	return result;
+}
+
+function Operand DecodeEffectiveAddress(u8 mod, u8 w, u8 r_m, s16 disp)
+{
+	Operand result = { 0 };
+
+	if (mod == 0x3)
+	{
+		result = DecodeRegister(w, r_m);
+	}
+	else
+	{
+		result.kind = Operand_Mem;
+		EffectiveAddress *ea = &result.mem;
+
+		ea->disp = disp;
+		if (!(mod == 0x0 && r_m == 0x6))
+		{
+			ea->reg1 = eac_register_table[r_m].reg1;
+			ea->reg2 = eac_register_table[r_m].reg2;
+		}
+	}
+
+	return result;
+}
+
+typedef struct DecodedInstruction
+{
+	Instruction inst;
+	Operand dst;
+	Operand src;
+	Flags flags;
+	union
+	{
+		struct
+		{
+			s8 data_lo;
+			u8 data_hi;
+		};
+		s16 data;
+	};
+} DecodedInstruction;
+
+global Instruction immed_table[] =
+{
+	[0b000] = ADD,
+	[0b001] = OR,
+	[0b010] = ADC,
+	[0b011] = SBB,
+	[0b100] = AND,
+	[0b101] = SUB,
+	[0b110] = XOR,
+	[0b111] = CMP,
 };
 
 function void DisassemblyError(Disassembler *state, String message)
 {
+	if (!state->error)
+	{
+		state->error_message = message;
+	}
+
 	state->error = true;
-	state->error_message = message;
 }
 
 function bool ThereWereDisassemblyErrors(Disassembler *state)
@@ -303,6 +480,8 @@ function void DsmWrite(Disassembler *state, const char *fmt, ...)
 			break;
 		}
 	}
+
+	va_end(args);
 }
 
 function bool BytesLeft(Disassembler *state)
@@ -355,11 +534,15 @@ function s16 ReadSx(Disassembler *state, u8 w)
 	return w ? ReadS16(state) : ReadS8(state);
 }
 
-function s16 ReadDisp(Disassembler *state, u8 mod)
+function s16 ReadDisp(Disassembler *state, u8 mod, u8 r_m)
 {
 	s16 disp = 0;
 
-	if (mod == 0x1)
+	if (mod == 0x0 && r_m == 0x6)
+	{
+		disp = ReadS16(state);
+	}
+	else if (mod == 0x1)
 	{
 		disp = ReadS8(state);
 	}
@@ -371,25 +554,306 @@ function s16 ReadDisp(Disassembler *state, u8 mod)
 	return disp;
 }
 
-function void PrintMemoryOperand(Disassembler *state, u8 r_m, s16 disp)
+function void InstSetData(DecodedInstruction *decoded, s16 data)
 {
-	String mem_string = effective_address_calculations[r_m];
+	decoded->data = data;
+	decoded->flags |= InstructionFlag_HasData;
+}
 
-	if (disp)
+function void DecodeNextInstruction(Disassembler *state, DecodedInstruction *decoded)
+{
+	ZeroStruct(decoded);
+
+	u8 b1 = ReadU8(state);
+
+	decoded->inst = instruction_kinds[b1];
+
+	Decoder *decoder = &decoders[b1];
+	switch (decoder->kind)
 	{
-		DsmWrite(state, "[%s %c %i]", mem_string, disp >= 0 ? '+' : '-', disp >= 0 ? disp : -disp);
+		//
+		// MOV:
+		//
+
+		case Decoder_MOV_MemToAccum:
+		{
+			// Memory to accumulator
+
+			u8 w = b1 & 0x1;
+
+			decoded->dst.kind     = Operand_Reg;
+			decoded->dst.reg      = w ? AX : AL;
+
+			decoded->src.kind     = Operand_Mem;
+			decoded->src.mem.disp = ReadS16(state);
+
+			if (w) decoded->flags |= W;
+		} break;
+
+		case Decoder_MOV_AccumToMem:
+		{
+			// Accumulator to memory
+
+			u8 w = b1 & 0x1;
+
+			decoded->dst.kind     = Operand_Mem;
+			decoded->dst.mem.disp = ReadS16(state);
+
+			decoded->src.kind     = Operand_Reg;
+			decoded->src.reg      = w ? AX : AL;
+
+			if (w) decoded->flags |= W;
+		} break;
+
+		//
+		// Common (shared decoding patterns for ADD, ADC, SUB, SBB, CMP, ..?)
+		//
+
+		case Decoder_RegMemToFromReg:
+		{
+			// Register/memory to/from register
+
+			if (!decoded->inst)
+			{
+				u8 op = (b1 >> 3) & 0x7;
+				decoded->inst = immed_table[op];
+			}
+
+			u8 w = (b1 >> 0) & 0x1;
+			u8 d = (b1 >> 1) & 0x1;
+
+			u8 b2 = ReadU8(state);
+
+			u8 mod = (b2 >> 6) & 0x3;
+			u8 reg = (b2 >> 3) & 0x7;
+			u8 r_m = (b2 >> 0) & 0x7;
+
+			s16 disp = ReadDisp(state, mod, r_m);
+
+			if (d)
+			{
+				decoded->dst = DecodeRegister(w, reg);
+				decoded->src = DecodeEffectiveAddress(mod, w, r_m, disp);
+			}
+			else
+			{
+				decoded->dst = DecodeEffectiveAddress(mod, w, r_m, disp);
+				decoded->src = DecodeRegister(w, reg);
+			}
+
+			if (w) decoded->flags |= W;
+			if (d) decoded->flags |= D;
+		} break;
+
+		case Decoder_ImmToRegMem:
+		{
+			u8 s = 0;
+			if (decoder->flags & DecoderFlag_HasS)
+			{
+				s = (b1 >> 1) & 0x1;
+			}
+
+			u8 w = (b1 >> 0) & 0x1;
+
+			u8 b2 = ReadU8(state);
+
+			if (!decoded->inst)
+			{
+				u8 op = (b2 >> 3) & 0x7;
+				decoded->inst = immed_table[op];
+			}
+
+			u8 mod = (b2 >> 6) & 0x3;
+			u8 r_m = (b2 >> 0) & 0x7;
+
+			s16 disp = ReadDisp(state, mod, r_m);
+			decoded->dst = DecodeEffectiveAddress(mod, w, r_m, disp);
+
+			s16 data;
+			if (s)
+			{
+				data = ReadS8(state);
+			}
+			else
+			{
+				data = ReadUx(state, w);
+			}
+
+			InstSetData(decoded, data);
+
+			if (w) decoded->flags |= W;
+			if (s) decoded->flags |= S;
+		} break;
+
+		case Decoder_ImmToReg:
+		{
+			// Immediate to register
+
+			u8 w   = (b1 >> 3) & 0x1;
+			u8 reg = (b1 >> 0) & 0x7;
+
+			decoded->dst = DecodeRegister(w, reg);
+
+			s16 data = ReadSx(state, w);
+			InstSetData(decoded, data);
+
+			if (w) decoded->flags |= W;
+		} break;
+
+		case Decoder_ImmToAccum:
+		{
+			u8 w = (b1 >> 0) & 0x1;
+
+			if (!decoded->inst)
+			{
+				u8 op = (b1 >> 3) & 0x7;
+				decoded->inst = immed_table[op];
+			}
+
+			decoded->dst.kind = Operand_Reg;
+			decoded->dst.reg  = w ? AX : AL;
+
+			s16 data = ReadSx(state, w);
+			InstSetData(decoded, data);
+
+			if (w) decoded->flags |= W;
+		} break;
+
+		//
+		//
+		//
+
+		case Decoder_JumpIpInc8:
+		{
+			s8 ip_inc8 = ReadS8(state);
+			InstSetData(decoded, ip_inc8);
+		} break;
+
+		//
+		//
+		//
+
+		default:
+		{
+			DisassemblyError(state, StringLit("Unexpected bit pattern"));
+		} break;
 	}
-	else
+}
+
+function void DisassembleOperand(Disassembler *state, Operand *operand)
+{
+	switch (operand->kind)
 	{
-		DsmWrite(state, "[%s]", mem_string);
+		case Operand_Reg:
+		{
+			DsmWrite(state, "%s", register_names[operand->reg]);
+		} break;
+
+		case Operand_Mem:
+		{
+			EffectiveAddress *ea = &operand->mem;
+
+			DsmWriteC(state, '[');
+
+			if (ea->reg1)
+			{
+				DsmWrite(state, "%s", register_names[ea->reg1]);
+				if (ea->reg2)
+				{
+					DsmWrite(state, " + %s", register_names[ea->reg2]);
+				}
+			}
+
+			if (ea->disp)
+			{
+				if (ea->reg1)
+				{
+					DsmWrite(state, " %c ", ea->disp >= 0 ? '+' : '-');
+				}
+
+				DsmWrite(state, "%i", Abs(ea->disp));
+			}
+
+			DsmWriteC(state, ']');
+		} break;
 	}
+}
+
+function void DisassembleInstruction(Disassembler *state, DecodedInstruction *decoded)
+{
+	String mnemonic = mnemonics[decoded->inst];
+
+	DsmWrite(state, "%s ", mnemonic);
+
+	switch (decoded->inst)
+	{
+		// Binary operators
+		case ADD:
+		case MOV:
+		case OR:
+		case ADC:
+		case SBB:
+		case AND:
+		case SUB:
+		case XOR:
+		case CMP:
+		{
+			DisassembleOperand(state, &decoded->dst);
+			DsmWriteC(state, ',');
+			DsmWriteC(state, ' ');
+
+			if (decoded->flags & InstructionFlag_HasData)
+			{
+				if (decoded->flags & W)
+				{
+					DsmWrite(state, "word %i", decoded->data);
+				}
+				else
+				{
+					DsmWrite(state, "byte %i", decoded->data);
+				}
+			}
+			else
+			{
+				DisassembleOperand(state, &decoded->src);
+			}
+		} break;
+
+		// IP-INC-8
+		case JO:
+		case JNO:
+		case JB:
+		case JAE:
+		case JE:
+		case JNE:
+		case JBE:
+		case JA:
+		case JS:
+		case JNS:
+		case JP:
+		case JPO:
+		case JL:
+		case JGE:
+		case JLE:
+		case JG:
+		case LOOPNE:
+		case LOOPE:
+		case LOOP:
+		case JCXZ:
+		{
+			s16 jmp = (s16)decoded->data + 2;
+			DsmWrite(state, "$%c%i", jmp >= 0 ? '+' : '-', Abs(jmp));
+		} break;
+	}
+
+	DsmWriteC(state, '\n');
 }
 
 function String Disassemble(DisassembleParams *params)
 {
-	if (!opcode_lookup_initialized)
+	if (!decoder_table_initialized)
 	{
-		InitializeOpcodeLookup();
+		InitializeDecoderTable();
 	}
 
 	Disassembler *state = &(Disassembler){
@@ -402,351 +866,23 @@ function String Disassemble(DisassembleParams *params)
 		.out_end     = params->output + params->output_capacity,
 	};
 
-	DsmWrite(state, "; disassembly for %s\n", state->source_name);
+	DsmWrite(state, "; disassembly for %.*s\n", StringExpand(state->source_name));
 	DsmWriteS(state, StringLit("bits 16\n"));
 
 	while (BytesLeft(state))
 	{
-		u8 b1 = ReadU8(state);
+		DecodedInstruction decoded;
+		DecodeNextInstruction(state, &decoded);
 
-		Opcode opcode = opcode_lookup[b1];
-
-		switch (opcode)
+		if (ThereWereDisassemblyErrors(state))
 		{
-			//
-			// MOV:
-			//
-
-			case Op_MOV_RegMemToFromReg:
-			{
-				// Register/memory to/from register
-
-				u8 w = (b1 >> 0) & 0x1;
-				u8 d = (b1 >> 1) & 0x1;
-
-				u8 b2 = ReadU8(state);
-
-				u8 mod = (b2 >> 6) & 0x3;
-				u8 reg = (b2 >> 3) & 0x7;
-				u8 r_m = (b2 >> 0) & 0x7;
-
-				if (mod == 0x3)
-				{
-					// Register-to-register
-
-					u8 dst = d ? reg : r_m;
-					u8 src = d ? r_m : reg;
-
-					String dst_string = register_names[w][dst];
-					String src_string = register_names[w][src];
-
-					DsmWrite(state, "mov %s, %s\n", dst_string, src_string);
-				}
-				else
-				{
-					// Register-to-memory/memory-to-register
-
-					String reg_string = register_names[w][reg];
-
-					DsmWriteS(state, StringLit("mov "));
-
-					if (mod == 0x0 &&
-						r_m == 0x6)
-					{
-						// Direct address
-
-						// Probably, nobody cares to see a negative address
-						u16 disp = ReadU16(state);
-
-						if (d)
-						{
-							DsmWrite(state, "%s, [%i]", reg_string, disp);
-						}
-						else
-						{
-							DsmWrite(state, "[%i], %s", disp, StringExpand(reg_string));
-						}
-					}
-					else
-					{
-						s16 disp = ReadDisp(state, mod);
-
-						if (d)
-						{
-							DsmWrite(state, "%s, ", reg_string);
-							PrintMemoryOperand(state, r_m, disp);
-						}
-						else
-						{
-							PrintMemoryOperand(state, r_m, disp);
-							DsmWrite(state, ", %s", reg_string);
-						}
-					}
-
-					DsmWriteC(state, '\n');
-				}
-			} break;
-
-			case Op_MOV_ImmToRegMem:
-			{
-				// Immediate to register/memory
-
-				u8 w = b1 & 0x1;
-
-				u8 b2 = ReadU8(state);
-
-				u8 mod = (b2 >> 6) & 0x3;
-				u8 r_m = (b2 >> 0) & 0x7;
-
-				s16 disp = ReadDisp(state, mod);
-				s16 data = ReadSx(state, w);
-
-				DsmWriteS(state, StringLit("mov "));
-
-				if (mod == 0x3)
-				{
-					String reg_string = register_names[w][r_m];
-					DsmWrite(state, "%s, ", reg_string);
-				}
-				else
-				{
-					PrintMemoryOperand(state, r_m, disp);
-					DsmWriteS(state, StringLit(", "));
-				}
-
-				if (w)
-				{
-					DsmWrite(state, "word %i\n", data);
-				}
-				else
-				{
-					DsmWrite(state, "byte %i\n", data);
-				}
-			} break;
-
-			case Op_MOV_ImmToReg:
-			{
-				// Immediate to register
-
-				u8 w   = (b1 >> 3) & 0x1;
-				u8 reg = (b1 >> 0) & 0x7;
-
-				s16 data = ReadSx(state, w);
-
-				String reg_string = register_names[w][reg];
-
-				if (data < 0)
-				{
-					DsmWrite(state, "mov %s, %i ; %i\n", reg_string, data, (u16)data);
-				}
-				else
-				{
-					DsmWrite(state, "mov %s, %i\n", reg_string, data);
-				}
-			} break;
-
-			case Op_MOV_MemToAccum:
-			{
-				// Memory to accumulator
-
-				u8 w = b1 & 0x1;
-
-				u16 addr = ReadU16(state);
-
-				DsmWrite(state, "mov %s, [%i]\n", w ? StringLit("ax") : StringLit("al"), addr);
-			} break;
-
-			case Op_MOV_AccumToMem:
-			{
-				// Accumulator to memory
-
-				u8 w = b1 & 0x1;
-
-				u16 addr = ReadU16(state);
-
-				DsmWrite(state, "mov [%i], %s\n", addr, w ? StringLit("ax") : StringLit("al"));
-			} break;
-
-			//
-			// Common (shared decoding patterns for ADD, ADC, SUB, SBB, CMP, ..?)
-			//
-
-			case Op_Common_RegMemToFromReg:
-			{
-				// Register/memory to/from register
-
-				u8 op = (b1 >> 3) & 0x7;
-				String op_string = common_instruction_patterns[op];
-
-				u8 w = (b1 >> 0) & 0x1;
-				u8 d = (b1 >> 1) & 0x1;
-
-				u8 b2 = ReadU8(state);
-
-				u8 mod = (b2 >> 6) & 0x3;
-				u8 reg = (b2 >> 3) & 0x7;
-				u8 r_m = (b2 >> 0) & 0x7;
-
-				DsmWrite(state, "%s ", op_string);
-
-				if (mod == 0x3)
-				{
-					// Register-to-register
-
-					u8 dst = d ? reg : r_m;
-					u8 src = d ? r_m : reg;
-
-					String dst_string = register_names[w][dst];
-					String src_string = register_names[w][src];
-
-					DsmWrite(state, "%s, %s\n", dst_string, src_string);
-				}
-				else
-				{
-					// Register-to-memory/memory-to-register
-
-					String reg_string = register_names[w][reg];
-
-					if (mod == 0b00 &&
-						r_m == 0b110)
-					{
-						// Direct address
-
-						// Probably, nobody cares to see a negative address
-						u16 disp = ReadU16(state);
-
-						if (d)
-						{
-							DsmWrite(state, "%s, [%i]", reg_string, disp);
-						}
-						else
-						{
-							DsmWrite(state, "[%i], %s", disp, reg_string);
-						}
-					}
-					else
-					{
-						s16 disp = ReadDisp(state, mod);
-
-						if (d)
-						{
-							DsmWrite(state, "%s, ", reg_string);
-							PrintMemoryOperand(state, r_m, disp);
-						}
-						else
-						{
-							PrintMemoryOperand(state, r_m, disp);
-							DsmWrite(state, ", %s", reg_string);
-						}
-					}
-
-					DsmWriteC(state, '\n');
-				}
-			} break;
-
-			case Op_Common_ImmToRegMem:
-			{
-				// This does not translate 1:1 to the mov one because the s bit
-				// influences the behaviour in a fun way that makes it not work
-				// quite the same.
-
-				u8 s = (b1 >> 1) & 0x1;
-				u8 w = (b1 >> 0) & 0x1;
-
-				u8 b2 = ReadU8(state);
-
-				u8 op = (b2 >> 3) & 0x7;
-				String op_name = common_instruction_patterns[op];
-
-				u8 mod = (b2 >> 6) & 0x3;
-				u8 r_m = (b2 >> 0) & 0x7;
-
-				DsmWrite(state, "%s ", op_name);
-
-				if (mod == 0x3)
-				{
-					String reg_string = register_names[w][r_m];
-					DsmWrite(state, "%s, ", reg_string);
-				}
-				else
-				{
-					if (mod == 0b00 &&
-						r_m == 0b110)
-					{
-						// Direct address
-
-						u16 disp = ReadU16(state);
-						DsmWrite(state, "[%i], ", disp);
-					}
-					else
-					{
-						s16 disp = ReadDisp(state, mod);
-
-						PrintMemoryOperand(state, r_m, disp);
-						DsmWriteS(state, StringLit(", "));
-					}
-				}
-
-				s16 data;
-				if (s)
-				{
-					data = ReadS8(state);
-				}
-				else
-				{
-					data = ReadUx(state, w);
-				}
-
-				// TODO(daniel): When do we actually care to print word/byte explicitly?
-				if (w)
-				{
-					DsmWrite(state, "word %i\n", data);
-				}
-				else
-				{
-					DsmWrite(state, "byte %i\n", data);
-				}
-			} break;
-
-			case Op_Common_ImmToAccum:
-			{
-				u8 w  = (b1 >> 0) & 0x1;
-
-				u8 op = (b1 >> 3) & 0x7;
-				String op_string = common_instruction_patterns[op];
-
-				s16 data = ReadSx(state, w);
-
-				DsmWrite(state, "%s %s, %i\n", op_string, w ? StringLit("ax") : StringLit("al"), data);
-			} break;
-
-			//
-			//
-			//
-
-			case Op_JumpIpInc8:
-			{
-				s8 ip_inc8 = ReadS8(state);
-
-				int mnemonic_pattern_shift = (b1 >> 4) == 0b1110;
-				String mnemonic = jump_mnemonics[mnemonic_pattern_shift][b1 & 15];
-				DsmWrite(state, "%s $%+i\n", mnemonic, ip_inc8 + 2);
-			} break;
-
-			//
-			//
-			//
-
-			default:
-			{
-				DisassemblyError(state, StringLit("Unexpected bit pattern"));
-			} break;
+			fprintf(stderr, "Error while disassembling %.*s:\n\t%.*s\n\n", StringExpand(state->source_name), StringExpand(state->error_message));
+			break;
 		}
-	}
-
-	if (ThereWereDisassemblyErrors(state))
-	{
-		fprintf(stderr, "Disassembly error: %.*s\n", StringExpand(state->error_message));
+		else
+		{
+			DisassembleInstruction(state, &decoded);
+		}
 	}
 
 	String result = 

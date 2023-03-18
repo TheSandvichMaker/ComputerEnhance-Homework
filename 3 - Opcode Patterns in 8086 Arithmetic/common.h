@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <string.h>
 
 #define function static inline
 #define global   static
@@ -19,7 +20,7 @@ typedef int64_t s64;
 
 typedef struct String
 {
-	size_t       count;
+	size_t    count;
 	const u8 *bytes;
 } String;
 
@@ -51,5 +52,9 @@ function String StringFromCString(const char *c_string)
 
 #define Min(a, b) ((a) < (b) ? (a) : (b))
 #define Max(a, b) ((a) > (b) ? (a) : (b))
+#define Abs(a) ((a) >= 0 ? (a) : -(a))
+
+#define ArrayCount(a) (sizeof(a) / sizeof((a)[0]))
+#define ZeroStruct(a) memset(a, 0, sizeof(*(a)))
 
 #define thread_local __declspec(thread)

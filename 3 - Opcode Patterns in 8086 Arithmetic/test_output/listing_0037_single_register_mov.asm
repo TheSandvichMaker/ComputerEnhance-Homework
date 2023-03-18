@@ -1,3 +1,3 @@
-; disassembly for listings\listing_0037_single_register_mov
+; disassembly for .*s
 bits 16
 mov cx, bx

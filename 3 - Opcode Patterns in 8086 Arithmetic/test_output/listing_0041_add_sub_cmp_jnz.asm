@@ -1,4 +1,4 @@
-; disassembly for listings\listing_0041_add_sub_cmp_jnz
+; disassembly for .*s
 bits 16
 add bx, [bx + si]
 add bx, [bp]
@@ -21,9 +21,9 @@ add ax, [bp]
 add al, [bx + si]
 add ax, bx
 add al, ah
-add ax, 1000
-add al, -30
-add al, 9
+add ax, word 1000
+add al, byte -30
+add al, byte 9
 sub bx, [bx + si]
 sub bx, [bp]
 sub si, word 2
@@ -45,9 +45,9 @@ sub ax, [bp]
 sub al, [bx + si]
 sub ax, bx
 sub al, ah
-sub ax, 1000
-sub al, -30
-sub al, 9
+sub ax, word 1000
+sub al, byte -30
+sub al, byte 9
 cmp bx, [bx + si]
 cmp bx, [bp]
 cmp si, word 2
@@ -69,9 +69,9 @@ cmp ax, [bp]
 cmp al, [bx + si]
 cmp ax, bx
 cmp al, ah
-cmp ax, 1000
-cmp al, -30
-cmp al, 9
+cmp ax, word 1000
+cmp al, byte -30
+cmp al, byte 9
 jne $+4
 jne $-2
 jne $-4
@@ -85,14 +85,14 @@ jp $-10
 jo $-12
 js $-14
 jne $-16
-jnl $-18
-jnle $-20
-jnb $-22
-jnbe $-24
-jnp $-26
+jge $-18
+jg $-20
+jae $-22
+ja $-24
+jpo $-26
 jno $-28
 jns $-30
 loop $-32
-loopz $-34
-loopnz $-36
+loope $-34
+loopne $-36
 jcxz $-38
