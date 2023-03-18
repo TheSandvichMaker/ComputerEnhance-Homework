@@ -261,14 +261,8 @@ function bool DecodeNextInstruction(Decoder *decoder, Instruction *inst)
 	DecodeParams *params = &decode_params[b1];
 	switch (params->kind)
 	{
-		//
-		// MOV:
-		//
-
 		case Decode_MemToAccum:
 		{
-			// Memory to accumulator
-
 			u8 w = b1 & 0x1;
 
 			inst->dst.kind     = Operand_Reg;
@@ -282,8 +276,6 @@ function bool DecodeNextInstruction(Decoder *decoder, Instruction *inst)
 
 		case Decode_AccumToMem:
 		{
-			// Accumulator to memory
-
 			u8 w = b1 & 0x1;
 
 			inst->dst.kind     = Operand_Mem;
@@ -295,14 +287,8 @@ function bool DecodeNextInstruction(Decoder *decoder, Instruction *inst)
 			if (w) inst->flags |= W;
 		} break;
 
-		//
-		// Common (shared decoding patterns for ADD, ADC, SUB, SBB, CMP, ..?)
-		//
-
 		case Decode_RegMemToFromReg:
 		{
-			// Register/memory to/from register
-
 			if (!inst->mnemonic)
 			{
 				u8 op = (b1 >> 3) & 0x7;
@@ -377,8 +363,6 @@ function bool DecodeNextInstruction(Decoder *decoder, Instruction *inst)
 
 		case Decode_ImmToReg:
 		{
-			// Immediate to register
-
 			u8 w   = (b1 >> 3) & 0x1;
 			u8 reg = (b1 >> 0) & 0x7;
 
@@ -409,19 +393,11 @@ function bool DecodeNextInstruction(Decoder *decoder, Instruction *inst)
 			if (w) inst->flags |= W;
 		} break;
 
-		//
-		//
-		//
-
 		case Decode_JumpIpInc8:
 		{
 			s8 ip_inc8 = DecoderReadS8(decoder);
 			InstSetData(inst, ip_inc8);
 		} break;
-
-		//
-		//
-		//
 
 		default:
 		{
