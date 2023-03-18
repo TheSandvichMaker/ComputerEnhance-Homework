@@ -92,8 +92,8 @@ enum DecoderKind
 {
 	Decoder_INVALID,
 
-	Decoder_MOV_MemToAccum,
-	Decoder_MOV_AccumToMem,
+	Decoder_MemToAccum,
+	Decoder_AccumToMem,
 	Decoder_RegMemToFromReg,
 	Decoder_ImmToRegMem,
 	Decoder_ImmToReg,
@@ -150,13 +150,13 @@ global Pattern patterns[] =
 	{ .b1 = 0b10001000, .b1_mask = 0b11111100, .inst = MOV, .decoder = Decoder_RegMemToFromReg },
 	{ .b1 = 0b11000110, .b1_mask = 0b11111110, .inst = MOV, .decoder = Decoder_ImmToRegMem     },
 	{ .b1 = 0b10110000, .b1_mask = 0b11110000, .inst = MOV, .decoder = Decoder_ImmToReg        },
-	{ .b1 = 0b10100000, .b1_mask = 0b11111110, .inst = MOV, .decoder = Decoder_MOV_MemToAccum  },
-	{ .b1 = 0b10100010, .b1_mask = 0b11111110, .inst = MOV, .decoder = Decoder_MOV_AccumToMem  },
+	{ .b1 = 0b10100000, .b1_mask = 0b11111110, .inst = MOV, .decoder = Decoder_MemToAccum      },
+	{ .b1 = 0b10100010, .b1_mask = 0b11111110, .inst = MOV, .decoder = Decoder_AccumToMem      },
 
 	// Immed group
-	{ .b1 = 0b00000000, .b1_mask = 0b11000100, .decoder = Decoder_RegMemToFromReg },
+	{ .b1 = 0b00000000, .b1_mask = 0b11000100, .decoder = Decoder_RegMemToFromReg                               },
 	{ .b1 = 0b10000000, .b1_mask = 0b11111100, .decoder = Decoder_ImmToRegMem, .decode_flags = DecoderFlag_HasS },
-	{ .b1 = 0b00000100, .b1_mask = 0b11000110, .decoder = Decoder_ImmToAccum      },
+	{ .b1 = 0b00000100, .b1_mask = 0b11000110, .decoder = Decoder_ImmToAccum                                    },
 
 	{ .b1 = 0b01110000, .inst = JO,  .decoder = Decoder_JumpIpInc8 },
 	{ .b1 = 0b01110001, .inst = JNO, .decoder = Decoder_JumpIpInc8 },
@@ -575,7 +575,7 @@ function void DecodeNextInstruction(Disassembler *state, DecodedInstruction *dec
 		// MOV:
 		//
 
-		case Decoder_MOV_MemToAccum:
+		case Decoder_MemToAccum:
 		{
 			// Memory to accumulator
 
@@ -590,7 +590,7 @@ function void DecodeNextInstruction(Disassembler *state, DecodedInstruction *dec
 			if (w) decoded->flags |= W;
 		} break;
 
-		case Decoder_MOV_AccumToMem:
+		case Decoder_AccumToMem:
 		{
 			// Accumulator to memory
 
