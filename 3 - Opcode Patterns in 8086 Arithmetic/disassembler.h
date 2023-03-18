@@ -1,10 +1,13 @@
-typedef struct DisassembleParams
+typedef struct Disassembler
 {
-	String input_name;
-	String input;
+	u8 *out_base;
+	u8 *out_at;
+	u8 *out_end;
 
-	u8    *output;
-	size_t output_capacity;
-} DisassembleParams;
+	bool   error;
+	String error_message;
+} Disassembler;
 
-function String Diassemble(DisassembleParams *params);
+function void InitializeDisassembler(Disassembler *disasm, u8 *output, size_t output_capacity);
+function void DisassembleInstruction(Disassembler *disasm, Instruction *inst);
+function String DisassemblerResult(Disassembler *disasm);

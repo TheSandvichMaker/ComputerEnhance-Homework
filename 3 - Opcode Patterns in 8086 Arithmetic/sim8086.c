@@ -1,10 +1,13 @@
 #include "common.h"
+#include "instruction.h"
+#include "decoder.h"
 #include "disassembler.h"
 
 //
 //
 //
 
+#include "decoder.c"
 #include "disassembler.c"
 
 //
@@ -97,13 +100,39 @@ int main(int argument_count, char **arguments)
 		.bytes = g_input,
 	};
 
-	String result = Disassemble(&(DisassembleParams){
-		.input_name      = file_name,
-		.input           = input,
-		.output          = g_output,
-		.output_capacity = sizeof(g_output),
-	});
+	Decoder *decoder = &(Decoder){ 0 };
+	InitializeDecoder(decoder, input);
 
+	Disassembler *disasm = &(Disassembler){ 0 };
+	InitializeDisassembler(disasm, g_output, sizeof(g_output));
+
+	for (;;)
+	{
+		Instruction inst;
+
+		if (!DecodeNextInstruction(decoder, &inst))
+		{
+			break;
+		}
+
+		if (decoder->error)
+		{
+			fprintf(stderr, "Error while decoding %.*s:\n\t%.*s\n\n", StringExpand(file_name), StringExpand(decoder->error_message));
+			break;
+		}
+
+		DisassembleInstruction(disasm, &inst);
+
+		if (disasm->error)
+		{
+			fprintf(stderr, "Error while disassembling %.*s:\n\t%.*s\n\n", StringExpand(file_name), StringExpand(disasm->error_message));
+			break;
+		}
+	}
+
+	String result = DisassemblerResult(disasm);
+	printf("; disassembly for %.*s\n", StringExpand(file_name));
+	printf("bits 16\n");
 	printf("%.*s", StringExpand(result));
 
 	return 0;

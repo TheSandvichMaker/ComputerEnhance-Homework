@@ -1,4 +1,4 @@
-; disassembly for .*s
+; disassembly for listings\listing_0038_many_register_mov
 bits 16
 mov cx, bx
 mov ch, ah

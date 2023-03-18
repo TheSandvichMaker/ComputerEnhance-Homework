@@ -1,4 +1,4 @@
-; disassembly for .*s
+; disassembly for listings\listing_0041_add_sub_cmp_jnz
 bits 16
 add bx, [bx + si]
 add bx, [bp]

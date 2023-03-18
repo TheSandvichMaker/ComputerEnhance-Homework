@@ -1,4 +1,4 @@
-; disassembly for .*s
+; disassembly for listings\listing_0042_completionist_decode
 bits 16
 mov si, bx
 mov dh, al
