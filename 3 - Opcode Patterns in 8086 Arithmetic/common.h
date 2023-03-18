@@ -24,6 +24,12 @@ typedef struct String
 	const u8 *bytes;
 } String;
 
+typedef struct Buffer
+{
+	size_t capacity;
+	u8    *bytes;
+} Buffer;
+
 function size_t CountCString(const char *c_string)
 {
 	size_t count = 0;

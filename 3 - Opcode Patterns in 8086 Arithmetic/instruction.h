@@ -174,6 +174,9 @@ typedef struct Instruction
 		};
 		s16 data;
 	};
+
+	u32 source_byte_offset;
+	u32 source_byte_count;
 } Instruction;
 
 function void InstSetData(Instruction *inst, s16 data)

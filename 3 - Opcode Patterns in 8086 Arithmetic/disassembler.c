@@ -1,9 +1,11 @@
-function void InitializeDisassembler(Disassembler *disasm, u8 *output, size_t output_capacity)
+function void InitializeDisassembler(Disassembler *disasm, DisassemblerParams *params)
 {
 	ZeroStruct(disasm);
-	disasm->out_base = output;
-	disasm->out_at   = output;
-	disasm->out_end  = output + output_capacity;
+	disasm->source   = params->input;
+	disasm->out_base = params->output.bytes;
+	disasm->out_at   = params->output.bytes;
+	disasm->out_end  = params->output.bytes + params->output.capacity;
+	disasm->style    = params->style;
 }
 
 function void DisassemblyError(Disassembler *disasm, String message)
@@ -24,6 +26,11 @@ function bool ThereWereDisassemblyErrors(Disassembler *disasm)
 function size_t DisasmWriteLeft(Disassembler *disasm)
 {
 	return disasm->out_end - disasm->out_at;
+}
+
+function void DisasmAnchorLine(Disassembler *disasm)
+{
+	disasm->line_start = disasm->out_at;
 }
 
 function void DisasmWriteS(Disassembler *disasm, String string)
@@ -53,8 +60,61 @@ function void DisasmWriteC(Disassembler *disasm, char c)
 	}
 }
 
-function void DisasmWriteInt(Disassembler *disasm, int i)
+function void DisasmAlignLine(Disassembler *disasm, int align)
 {
+	s64 to_write = align - (disasm->out_at - disasm->line_start);
+	for (s64 i = 0; i < to_write; i++)
+	{
+		DisasmWriteC(disasm, ' ');
+	}
+}
+
+global u8 int_to_char[] =
+{
+	[0]  = '0',
+	[1]  = '1',
+	[2]  = '2',
+	[3]  = '3',
+	[4]  = '4',
+	[5]  = '5',
+	[6]  = '6',
+	[7]  = '7',
+	[8]  = '8',
+	[9]  = '9',
+	[10] = 'a',
+	[11] = 'b',
+	[12] = 'c',
+	[13] = 'd',
+	[14] = 'e',
+	[15] = 'f',
+};
+
+typedef struct IntFormat
+{
+	int base;
+	int min_length;
+} IntFormat;
+
+function void DisasmWriteI(Disassembler *disasm, int i, IntFormat *format)
+{
+	int base       = format->base;
+	int min_length = format->min_length;
+
+	if (!base)
+	{
+		base = 10;
+	}
+
+	if (base < 2)
+	{
+		base = 2;
+	}
+
+	if (base > 16)
+	{
+		base = 16;
+	}
+
 	if (i < 0)
 	{
 		DisasmWriteC(disasm, '-');
@@ -65,14 +125,22 @@ function void DisasmWriteInt(Disassembler *disasm, int i)
 
 	do
 	{
-		int d = i % 10;
-		DisasmWriteC(disasm, (char)('0' + d));
+		int d = i % base;
+		DisasmWriteC(disasm, int_to_char[d]);
 
-		i /= 10;
+		i /= base;
 	}
 	while (i > 0);
 
 	u8 *end = disasm->out_at;
+
+	s64 leading_zeroes = min_length - (end - start);
+	for (s64 zero_index = 0; zero_index < leading_zeroes; zero_index++)
+	{
+		DisasmWriteC(disasm, '0');
+	}
+
+	end = disasm->out_at;
 
 	while (start < end)
 	{
@@ -121,7 +189,13 @@ function void DisasmWrite(Disassembler *disasm, const char *fmt, ...)
 					{
 						DisasmWriteC(disasm, '+');
 					}
-					DisasmWriteInt(disasm, i);
+					DisasmWriteI(disasm, i, &(IntFormat){ .base = 10 });
+				} break;
+
+				case 'x':
+				{
+					u32 x = va_arg(args, u32);
+					DisasmWriteI(disasm, x, &(IntFormat){ .base = 16 });
 				} break;
 
 				case '%':
@@ -192,6 +266,7 @@ function void DisassembleInstruction(Disassembler *disasm, Instruction *inst)
 {
 	String mnemonic = mnemonic_names[inst->mnemonic];
 
+	DisasmAnchorLine(disasm);
 	DisasmWrite(disasm, "%s ", mnemonic);
 
 	switch (inst->mnemonic)
@@ -255,7 +330,42 @@ function void DisassembleInstruction(Disassembler *disasm, Instruction *inst)
 		} break;
 	}
 
+	if (disasm->style.show_original_bytes)
+	{
+		DisasmAlignLine(disasm, 32);
+		DisasmWrite(disasm, " ;");
+
+		for (size_t i = 0; i < inst->source_byte_count; i++)
+		{
+			u8 byte = disasm->source.bytes[inst->source_byte_offset + i];
+
+			int base       = disasm->style.show_original_bytes_base;
+			int min_length = 0;
+
+			// log(base; 256)
+			for (int counter = 256; counter > 1; counter /= base)
+			{
+				min_length += 1;
+			}
+
+			DisasmWriteC(disasm, ' ');
+			IntFormat fmt =
+			{
+				.base       = base,
+				.min_length = min_length,
+			};
+			DisasmWriteI(disasm, byte, &fmt);
+		}
+	}
+
 	DisasmWriteC(disasm, '\n');
+}
+
+function void DisassemblerResetOutput(Disassembler *disasm, Buffer output)
+{
+	disasm->out_base = output.bytes;
+	disasm->out_at   = output.bytes;
+	disasm->out_end  = output.bytes + output.capacity;
 }
 
 function String DisassemblerResult(Disassembler *disasm)

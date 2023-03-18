@@ -54,10 +54,16 @@ function void RegisterPattern(Pattern *pattern)
 	decode_params[pattern->b1].flags = pattern->decode_flags;
 	instruction_kinds[pattern->b1] = pattern->mnemonic;
 
-	// TODO(daniel): Figure out a way to not have to iterate all possible bit patterns for the fill
+	u8 b1_mask = pattern->b1_mask;
+
+	if (!b1_mask)
+	{
+		b1_mask = 0b11111111;
+	}
+
 	for (u64 fill_pattern = 0; fill_pattern < 256; fill_pattern++)
 	{
-		u8 fill = (fill_pattern & ~pattern->b1_mask);
+		u8 fill = (fill_pattern & ~b1_mask);
 		if (fill != 0)
 		{
 			u8 lookup_pattern = (u8)(pattern->b1|fill);
@@ -70,38 +76,37 @@ function void RegisterPattern(Pattern *pattern)
 
 global Pattern patterns[] =
 {
-	{ .b1 = 0b10001000, .b1_mask = 0b11111100, .mnemonic = MOV, .decoder = Decode_RegMemToFromReg },
-	{ .b1 = 0b11000110, .b1_mask = 0b11111110, .mnemonic = MOV, .decoder = Decode_ImmToRegMem     },
-	{ .b1 = 0b10110000, .b1_mask = 0b11110000, .mnemonic = MOV, .decoder = Decode_ImmToReg        },
-	{ .b1 = 0b10100000, .b1_mask = 0b11111110, .mnemonic = MOV, .decoder = Decode_MemToAccum      },
-	{ .b1 = 0b10100010, .b1_mask = 0b11111110, .mnemonic = MOV, .decoder = Decode_AccumToMem      },
+	{ .b1 = 0b10001000, .b1_mask = 0b11111100, .mnemonic = MOV,           .decoder = Decode_RegMemToFromReg                                  },
+	{ .b1 = 0b11000110, .b1_mask = 0b11111110, .mnemonic = MOV,           .decoder = Decode_ImmToRegMem                                      },
+	{ .b1 = 0b10110000, .b1_mask = 0b11110000, .mnemonic = MOV,           .decoder = Decode_ImmToReg                                         },
+	{ .b1 = 0b10100000, .b1_mask = 0b11111110, .mnemonic = MOV,           .decoder = Decode_MemToAccum                                       },
+	{ .b1 = 0b10100010, .b1_mask = 0b11111110, .mnemonic = MOV,           .decoder = Decode_AccumToMem                                       },
 
-	// Immed group
-	{ .b1 = 0b00000000, .b1_mask = 0b11000100, .decoder = Decode_RegMemToFromReg                               },
-	{ .b1 = 0b10000000, .b1_mask = 0b11111100, .decoder = Decode_ImmToRegMem, .decode_flags = DecoderFlag_HasS },
-	{ .b1 = 0b00000100, .b1_mask = 0b11000110, .decoder = Decode_ImmToAccum                                    },
+	{ .b1 = 0b00000000, .b1_mask = 0b11000100, .mnemonic = Mnemonic_None, .decoder = Decode_RegMemToFromReg                                  },
+	{ .b1 = 0b10000000, .b1_mask = 0b11111100, .mnemonic = Mnemonic_None, .decoder = Decode_ImmToRegMem,    .decode_flags = DecoderFlag_HasS },
+	{ .b1 = 0b00000100, .b1_mask = 0b11000110, .mnemonic = Mnemonic_None, .decoder = Decode_ImmToAccum                                       },
 
-	{ .b1 = 0b01110000, .mnemonic = JO,  .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b01110001, .mnemonic = JNO, .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b01110010, .mnemonic = JB,  .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b01110011, .mnemonic = JAE, .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b01110100, .mnemonic = JE,  .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b01110101, .mnemonic = JNE, .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b01110110, .mnemonic = JBE, .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b01110111, .mnemonic = JA,  .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b01111000, .mnemonic = JS,  .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b01111001, .mnemonic = JNS, .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b01111010, .mnemonic = JP,  .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b01111011, .mnemonic = JPO, .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b01111100, .mnemonic = JL,  .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b01111101, .mnemonic = JGE, .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b01111110, .mnemonic = JLE, .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b01111111, .mnemonic = JG,  .decoder = Decode_JumpIpInc8 },
+	{ .b1 = 0b01110000, .b1_mask = 0b11111111, .mnemonic = JO,            .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b01110001, .b1_mask = 0b11111111, .mnemonic = JNO,           .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b01110010, .b1_mask = 0b11111111, .mnemonic = JB,            .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b01110011, .b1_mask = 0b11111111, .mnemonic = JAE,           .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b01110100, .b1_mask = 0b11111111, .mnemonic = JE,            .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b01110101, .b1_mask = 0b11111111, .mnemonic = JNE,           .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b01110110, .b1_mask = 0b11111111, .mnemonic = JBE,           .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b01110111, .b1_mask = 0b11111111, .mnemonic = JA,            .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b01111000, .b1_mask = 0b11111111, .mnemonic = JS,            .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b01111001, .b1_mask = 0b11111111, .mnemonic = JNS,           .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b01111010, .b1_mask = 0b11111111, .mnemonic = JP,            .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b01111011, .b1_mask = 0b11111111, .mnemonic = JPO,           .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b01111100, .b1_mask = 0b11111111, .mnemonic = JL,            .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b01111101, .b1_mask = 0b11111111, .mnemonic = JGE,           .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b01111110, .b1_mask = 0b11111111, .mnemonic = JLE,           .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b01111111, .b1_mask = 0b11111111, .mnemonic = JG,            .decoder = Decode_JumpIpInc8                                       },
 
-	{ .b1 = 0b11100000, .mnemonic = LOOPNE, .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b11100001, .mnemonic = LOOPE,  .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b11100010, .mnemonic = LOOP,   .decoder = Decode_JumpIpInc8 },
-	{ .b1 = 0b11100011, .mnemonic = JCXZ,   .decoder = Decode_JumpIpInc8 },
+	{ .b1 = 0b11100000, .b1_mask = 0b11111111, .mnemonic = LOOPNE,        .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b11100001, .b1_mask = 0b11111111, .mnemonic = LOOPE,         .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b11100010, .b1_mask = 0b11111111, .mnemonic = LOOP,          .decoder = Decode_JumpIpInc8                                       },
+	{ .b1 = 0b11100011, .b1_mask = 0b11111111, .mnemonic = JCXZ,          .decoder = Decode_JumpIpInc8                                       },
 };
 
 function void InitializeDecoderTable(void)
@@ -247,15 +252,16 @@ function Operand DecodeEffectiveAddress(u8 mod, u8 w, u8 r_m, s16 disp)
 
 function bool DecodeNextInstruction(Decoder *decoder, Instruction *inst)
 {
+	ZeroStruct(inst);
+
 	if (!DecoderBytesLeft(decoder))
 	{
 		return false;
 	}
 
-	ZeroStruct(inst);
+	inst->source_byte_offset = (u32)(decoder->at - decoder->base);
 
 	u8 b1 = DecoderReadU8(decoder);
-
 	inst->mnemonic = instruction_kinds[b1];
 
 	DecodeParams *params = &decode_params[b1];
@@ -404,6 +410,9 @@ function bool DecodeNextInstruction(Decoder *decoder, Instruction *inst)
 			DecoderError(decoder, StringLit("Unexpected bit pattern"));
 		} break;
 	}
+
+	u32 source_byte_end = (u32)(decoder->at - decoder->base);
+	inst->source_byte_count = source_byte_end - inst->source_byte_offset;
 
 	return !ThereWereDecoderErrors(decoder);
 }
