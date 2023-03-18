@@ -1,33 +1,58 @@
 ; disassembly for listings\listing_0042_completionist_decode
 bits 16
-mov si, bx
-mov dh, al
-mov cl, byte 12
-mov ch, byte -12
-mov cx, word 12
-mov cx, word -12
-mov dx, word 3948
-mov dx, word -3948
-mov al, [bx + si]
-mov bx, [bp + di]
-mov dx, [bp]
-mov ah, [bx + si + 4]
-mov al, [bx + si + 4999]
-mov [bx + di], cx
-mov [bp + si], cl
-mov [bp], ch
-mov ax, [bx + di - 37]
-mov [si - 300], cx
-mov dx, [bx - 32]
-mov [bp + di], byte 7
-mov [di + 901], word 347
-mov bp, [5]
-mov bx, [3458]
-mov ax, [2555]
-mov ax, [16]
-mov [2554], ax
-mov [15], ax
-jcxz $+52
-jcxz $+56
-mov ax, word -245
-jno $-28
+mov si, bx                       ; 10001001 11011110
+mov dh, al                       ; 10001000 11000110
+mov cl, byte 12                  ; 10110001 00001100
+mov ch, byte 244                 ; 10110101 11110100
+mov cx, word 12                  ; 10111001 00001100 00000000
+mov cx, word -12                 ; 10111001 11110100 11111111
+mov dx, word 3948                ; 10111010 01101100 00001111
+mov dx, word -3948               ; 10111010 10010100 11110000
+mov al, [bx + si]                ; 10001010 00000000
+mov bx, [bp + di]                ; 10001011 00011011
+mov dx, [bp]                     ; 10001011 01010110 00000000
+mov ah, [bx + si + 4]            ; 10001010 01100000 00000100
+mov al, [bx + si + 4999]         ; 10001010 10000000 10000111 00010011
+mov [bx + di], cx                ; 10001001 00001001
+mov [bp + si], cl                ; 10001000 00001010
+mov [bp], ch                     ; 10001000 01101110 00000000
+mov ax, [bx + di - 37]           ; 10001011 01000001 11011011
+mov [si - 300], cx               ; 10001001 10001100 11010100 11111110
+mov dx, [bx - 32]                ; 10001011 01010111 11100000
+mov [bp + di], byte 7            ; 11000110 00000011 00000111
+mov [di + 901], word 347         ; 11000111 10000101 10000101 00000011 01011011 00000001
+mov bp, [5]                      ; 10001011 00101110 00000101 00000000
+mov bx, [3458]                   ; 10001011 00011110 10000010 00001101
+mov ax, [2555]                   ; 10100001 11111011 00001001
+mov ax, [16]                     ; 10100001 00010000 00000000
+mov [2554], ax                   ; 10100011 11111010 00001001
+mov [15], ax                     ; 10100011 00001111 00000000
+push word [bp + si]              ; 11111111 00110010
+push word [3000]                 ; 11111111 00110110 10111000 00001011
+push word [bx + di - 30]         ; 11111111 01110001 11100010
+push cx                          ; 01010001
+push ax                          ; 01010000
+push dx                          ; 01010010
+push cs                          ; 00001110
+pop word [bp + si]               ; 10001111 00000010
+pop word [3]                     ; 10001111 00000110 00000011 00000000
+pop word [bx + di - 3000]        ; 10001111 10000001 01001000 11110100
+pop sp                           ; 01011100
+pop di                           ; 01011111
+pop si                           ; 01011110
+pop ds                           ; 00011111
+xchg ax, [bp - 1000]             ; 10000111 10000110 00011000 11111100
+xchg bp, [bx + 50]               ; 10000111 01101111 00110010
+xchg ax, ax                      ; 10010000
+xchg ax, dx                      ; 10010010
+xchg ax, sp                      ; 10010100
+xchg ax, si                      ; 10010110
+xchg ax, di                      ; 10010111
+xchg cx, dx                      ; 10000111 11001010
+xchg si, cx                      ; 10000111 11110001
+xchg cl, ah                      ; 10000110 11001100
+in al, byte 200                  ; 11100100 11001000
+in al, dx                        ; 11101100
+in ax, dx                        ; 11101101
+out byte 44, ax                  ; 11100111 00101100
+out dx, al                       ; 11101110

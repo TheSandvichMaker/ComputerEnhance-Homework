@@ -48,6 +48,27 @@ function void DisasmWriteS(Disassembler *disasm, String string)
 	}
 }
 
+function void DisasmWriteSLower(Disassembler *disasm, String string)
+{
+	size_t count_left  = DisasmWriteLeft(disasm);
+	size_t count_write = Min(count_left, string.count);
+	for (size_t i = 0; i < count_write; i++)
+	{
+		u8 b = string.bytes[i];
+		if (b >= 'A' && b <= 'Z')
+		{
+			b = 'a' + (b - 'A');
+		}
+		*disasm->out_at++ = b;
+	}
+
+	if (count_write < string.count)
+	{
+		DisassemblyError(disasm, StringLit("Output buffer overflow!"));
+	}
+}
+
+
 function void DisasmWriteC(Disassembler *disasm, char c)
 {
 	if (disasm->out_at < disasm->out_end)
@@ -182,6 +203,11 @@ function void DisasmWrite(Disassembler *disasm, const char *fmt, ...)
 					DisasmWriteS(disasm, va_arg(args, String));
 				} break;
 
+				case 'm':
+				{
+					DisasmWriteSLower(disasm, va_arg(args, String));
+				} break;
+
 				case 'i':
 				{
 					int i = va_arg(args, int);
@@ -228,6 +254,7 @@ function void DisassembleOperand(Disassembler *disasm, Operand *operand)
 	switch (operand->kind)
 	{
 		case Operand_Reg:
+		case Operand_SegReg:
 		{
 			DisasmWrite(disasm, "%s", register_names[operand->reg]);
 		} break;
@@ -259,6 +286,26 @@ function void DisassembleOperand(Disassembler *disasm, Operand *operand)
 
 			DisasmWriteC(disasm, ']');
 		} break;
+
+		case Operand_None:
+		{
+			/* don't do anything! */
+		} break;
+	}
+}
+
+function void DisassembleData(Disassembler *disasm, Instruction *inst)
+{
+	if (inst->flags & InstructionFlag_DataLO)
+	{
+		if (inst->flags & InstructionFlag_DataHI)
+		{
+			DisasmWrite(disasm, "word %i", inst->data);
+		}
+		else
+		{
+			DisasmWrite(disasm, "byte %i", inst->data);
+		}
 	}
 }
 
@@ -266,12 +313,16 @@ function void DisassembleInstruction(Disassembler *disasm, Instruction *inst)
 {
 	String mnemonic = mnemonic_names[inst->mnemonic];
 
+	if (mnemonic.count == 0)
+	{
+		mnemonic = StringLit("<invalid mnemonic>");
+	}
+
 	DisasmAnchorLine(disasm);
-	DisasmWrite(disasm, "%s ", mnemonic);
+	DisasmWrite(disasm, "%m ", mnemonic);
 
 	switch (inst->mnemonic)
 	{
-		// Binary operators
 		case ADD:
 		case MOV:
 		case OR:
@@ -281,29 +332,49 @@ function void DisassembleInstruction(Disassembler *disasm, Instruction *inst)
 		case SUB:
 		case XOR:
 		case CMP:
+		case XCHG:
+		case IN:
 		{
-			DisassembleOperand(disasm, &inst->dst);
+			DisassembleOperand(disasm, &inst->op1);
 			DisasmWriteC(disasm, ',');
 			DisasmWriteC(disasm, ' ');
 
-			if (inst->flags & InstructionFlag_HasData)
+			if (inst->flags & InstructionFlag_DataLO)
 			{
-				if (inst->flags & W)
-				{
-					DisasmWrite(disasm, "word %i", inst->data);
-				}
-				else
-				{
-					DisasmWrite(disasm, "byte %i", inst->data);
-				}
+				DisassembleData(disasm, inst);
 			}
 			else
 			{
-				DisassembleOperand(disasm, &inst->src);
+				DisassembleOperand(disasm, &inst->op2);
 			}
 		} break;
 
-		// IP-INC-8
+		case OUT:
+		{
+			if (inst->flags & InstructionFlag_DataLO)
+			{
+				DisassembleData(disasm, inst);
+			}
+			else
+			{
+				DisassembleOperand(disasm, &inst->op2);
+			}
+			DisasmWriteC(disasm, ',');
+			DisasmWriteC(disasm, ' ');
+
+			DisassembleOperand(disasm, &inst->op1);
+		} break;
+
+		case PUSH:
+		case POP:
+		{
+			if (inst->op1.kind == Operand_Mem)
+			{
+				DisasmWrite(disasm, "word ");
+			}
+			DisassembleOperand(disasm, &inst->op1);
+		} break;
+
 		case JO:
 		case JNO:
 		case JB:

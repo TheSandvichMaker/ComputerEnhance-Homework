@@ -161,8 +161,8 @@ int main(int argument_count, char **arguments)
 
 	String file_name = { 0 };
 
-	bool show_bytes      = false;
-	int  show_bytes_base = 16;
+	bool show_bytes      = true;
+	int  show_bytes_base = 2;
 
 #if 0
 	ArgumentParser arg_parser;

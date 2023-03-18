@@ -1,98 +1,98 @@
 ; disassembly for listings\listing_0041_add_sub_cmp_jnz
 bits 16
-add bx, [bx + si]
-add bx, [bp]
-add si, word 2
-add bp, word 2
-add cx, word 8
-add bx, [bp]
-add cx, [bx + 2]
-add bh, [bp + si + 4]
-add di, [bp + di + 6]
-add [bx + si], bx
-add [bp], bx
-add [bp], bx
-add [bx + 2], cx
-add [bp + si + 4], bh
-add [bp + di + 6], di
-add [bx], byte 34
-add [bp + si + 1000], word 29
-add ax, [bp]
-add al, [bx + si]
-add ax, bx
-add al, ah
-add ax, word 1000
-add al, byte -30
-add al, byte 9
-sub bx, [bx + si]
-sub bx, [bp]
-sub si, word 2
-sub bp, word 2
-sub cx, word 8
-sub bx, [bp]
-sub cx, [bx + 2]
-sub bh, [bp + si + 4]
-sub di, [bp + di + 6]
-sub [bx + si], bx
-sub [bp], bx
-sub [bp], bx
-sub [bx + 2], cx
-sub [bp + si + 4], bh
-sub [bp + di + 6], di
-sub [bx], byte 34
-sub [bx + di], word 29
-sub ax, [bp]
-sub al, [bx + si]
-sub ax, bx
-sub al, ah
-sub ax, word 1000
-sub al, byte -30
-sub al, byte 9
-cmp bx, [bx + si]
-cmp bx, [bp]
-cmp si, word 2
-cmp bp, word 2
-cmp cx, word 8
-cmp bx, [bp]
-cmp cx, [bx + 2]
-cmp bh, [bp + si + 4]
-cmp di, [bp + di + 6]
-cmp [bx + si], bx
-cmp [bp], bx
-cmp [bp], bx
-cmp [bx + 2], cx
-cmp [bp + si + 4], bh
-cmp [bp + di + 6], di
-cmp [bx], byte 34
-cmp [4834], word 29
-cmp ax, [bp]
-cmp al, [bx + si]
-cmp ax, bx
-cmp al, ah
-cmp ax, word 1000
-cmp al, byte -30
-cmp al, byte 9
-jne $+4
-jne $-2
-jne $-4
-jne $-2
-je $+0
-jl $-2
-jle $-4
-jb $-6
-jbe $-8
-jp $-10
-jo $-12
-js $-14
-jne $-16
-jge $-18
-jg $-20
-jae $-22
-ja $-24
-jpo $-26
-jno $-28
-jns $-30
-loop $-32
-loope $-34
-loopne $-36
-jcxz $-38
+add bx, [bx + si]                ; 00000011 00011000
+add bx, [bp]                     ; 00000011 01011110 00000000
+add si, word 2                   ; 10000011 11000110 00000010
+add bp, word 2                   ; 10000011 11000101 00000010
+add cx, word 8                   ; 10000011 11000001 00001000
+add bx, [bp]                     ; 00000011 01011110 00000000
+add cx, [bx + 2]                 ; 00000011 01001111 00000010
+add bh, [bp + si + 4]            ; 00000010 01111010 00000100
+add di, [bp + di + 6]            ; 00000011 01111011 00000110
+add [bx + si], bx                ; 00000001 00011000
+add [bp], bx                     ; 00000001 01011110 00000000
+add [bp], bx                     ; 00000001 01011110 00000000
+add [bx + 2], cx                 ; 00000001 01001111 00000010
+add [bp + si + 4], bh            ; 00000000 01111010 00000100
+add [bp + di + 6], di            ; 00000001 01111011 00000110
+add [bx], byte 34                ; 10000000 00000111 00100010
+add [bp + si + 1000], word 29    ; 10000011 10000010 11101000 00000011 00011101
+add ax, [bp]                     ; 00000011 01000110 00000000
+add al, [bx + si]                ; 00000010 00000000
+add ax, bx                       ; 00000001 11011000
+add al, ah                       ; 00000000 11100000
+add ax, word 1000                ; 00000101 11101000 00000011
+add al, byte 226                 ; 00000100 11100010
+add al, byte 9                   ; 00000100 00001001
+sub bx, [bx + si]                ; 00101011 00011000
+sub bx, [bp]                     ; 00101011 01011110 00000000
+sub si, word 2                   ; 10000011 11101110 00000010
+sub bp, word 2                   ; 10000011 11101101 00000010
+sub cx, word 8                   ; 10000011 11101001 00001000
+sub bx, [bp]                     ; 00101011 01011110 00000000
+sub cx, [bx + 2]                 ; 00101011 01001111 00000010
+sub bh, [bp + si + 4]            ; 00101010 01111010 00000100
+sub di, [bp + di + 6]            ; 00101011 01111011 00000110
+sub [bx + si], bx                ; 00101001 00011000
+sub [bp], bx                     ; 00101001 01011110 00000000
+sub [bp], bx                     ; 00101001 01011110 00000000
+sub [bx + 2], cx                 ; 00101001 01001111 00000010
+sub [bp + si + 4], bh            ; 00101000 01111010 00000100
+sub [bp + di + 6], di            ; 00101001 01111011 00000110
+sub [bx], byte 34                ; 10000000 00101111 00100010
+sub [bx + di], word 29           ; 10000011 00101001 00011101
+sub ax, [bp]                     ; 00101011 01000110 00000000
+sub al, [bx + si]                ; 00101010 00000000
+sub ax, bx                       ; 00101001 11011000
+sub al, ah                       ; 00101000 11100000
+sub ax, word 1000                ; 00101101 11101000 00000011
+sub al, byte 226                 ; 00101100 11100010
+sub al, byte 9                   ; 00101100 00001001
+cmp bx, [bx + si]                ; 00111011 00011000
+cmp bx, [bp]                     ; 00111011 01011110 00000000
+cmp si, word 2                   ; 10000011 11111110 00000010
+cmp bp, word 2                   ; 10000011 11111101 00000010
+cmp cx, word 8                   ; 10000011 11111001 00001000
+cmp bx, [bp]                     ; 00111011 01011110 00000000
+cmp cx, [bx + 2]                 ; 00111011 01001111 00000010
+cmp bh, [bp + si + 4]            ; 00111010 01111010 00000100
+cmp di, [bp + di + 6]            ; 00111011 01111011 00000110
+cmp [bx + si], bx                ; 00111001 00011000
+cmp [bp], bx                     ; 00111001 01011110 00000000
+cmp [bp], bx                     ; 00111001 01011110 00000000
+cmp [bx + 2], cx                 ; 00111001 01001111 00000010
+cmp [bp + si + 4], bh            ; 00111000 01111010 00000100
+cmp [bp + di + 6], di            ; 00111001 01111011 00000110
+cmp [bx], byte 34                ; 10000000 00111111 00100010
+cmp [4834], word 29              ; 10000011 00111110 11100010 00010010 00011101
+cmp ax, [bp]                     ; 00111011 01000110 00000000
+cmp al, [bx + si]                ; 00111010 00000000
+cmp ax, bx                       ; 00111001 11011000
+cmp al, ah                       ; 00111000 11100000
+cmp ax, word 1000                ; 00111101 11101000 00000011
+cmp al, byte 226                 ; 00111100 11100010
+cmp al, byte 9                   ; 00111100 00001001
+jne $+4                          ; 01110101 00000010
+jne $-2                          ; 01110101 11111100
+jne $-4                          ; 01110101 11111010
+jne $-2                          ; 01110101 11111100
+je $+0                           ; 01110100 11111110
+jl $-2                           ; 01111100 11111100
+jle $-4                          ; 01111110 11111010
+jb $-6                           ; 01110010 11111000
+jbe $-8                          ; 01110110 11110110
+jp $-10                          ; 01111010 11110100
+jo $-12                          ; 01110000 11110010
+js $-14                          ; 01111000 11110000
+jne $-16                         ; 01110101 11101110
+jge $-18                         ; 01111101 11101100
+jg $-20                          ; 01111111 11101010
+jae $-22                         ; 01110011 11101000
+ja $-24                          ; 01110111 11100110
+jpo $-26                         ; 01111011 11100100
+jno $-28                         ; 01110001 11100010
+jns $-30                         ; 01111001 11100000
+loop $-32                        ; 11100010 11011110
+loope $-34                       ; 11100001 11011100
+loopne $-36                      ; 11100000 11011010
+jcxz $-38                        ; 11100011 11011000

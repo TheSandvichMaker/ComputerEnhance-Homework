@@ -1,16 +1,16 @@
 ; disassembly for listings\listing_0039_more_movs
 bits 16
-mov si, bx
-mov dh, al
-mov cx, word 12
-mov cx, word -12
-mov dx, word 3948
-mov dx, word -3948
-mov al, [bx + si]
-mov bx, [bp + di]
-mov dx, [bp]
-mov ah, [bx + si + 4]
-mov al, [bx + si + 4999]
-mov [bx + di], cx
-mov [bp + si], cl
-mov [bp], ch
+mov si, bx                       ; 10001001 11011110
+mov dh, al                       ; 10001000 11000110
+mov cx, word 12                  ; 10111001 00001100 00000000
+mov cx, word -12                 ; 10111001 11110100 11111111
+mov dx, word 3948                ; 10111010 01101100 00001111
+mov dx, word -3948               ; 10111010 10010100 11110000
+mov al, [bx + si]                ; 10001010 00000000
+mov bx, [bp + di]                ; 10001011 00011011
+mov dx, [bp]                     ; 10001011 01010110 00000000
+mov ah, [bx + si + 4]            ; 10001010 01100000 00000100
+mov al, [bx + si + 4999]         ; 10001010 10000000 10000111 00010011
+mov [bx + di], cx                ; 10001001 00001001
+mov [bp + si], cl                ; 10001000 00001010
+mov [bp], ch                     ; 10001000 01101110 00000000

@@ -1,52 +1,6 @@
-typedef u8 DecodeKind;
-enum DecodeKind
-{
-	Decode_INVALID,
-
-	Decode_MemToAccum,
-	Decode_AccumToMem,
-	Decode_RegMemToFromReg,
-	Decode_ImmToRegMem,
-	Decode_ImmToReg,
-	Decode_ImmToAccum,
-	Decode_JumpIpInc8,
-};
-
-global Mnemonic immed_table[] =
-{
-	[0b000] = ADD,
-	[0b001] = OR,
-	[0b010] = ADC,
-	[0b011] = SBB,
-	[0b100] = AND,
-	[0b101] = SUB,
-	[0b110] = XOR,
-	[0b111] = CMP,
-};
-
-typedef u8 DecodeFlags;
-enum DecodeFlags
-{
-	DecoderFlag_HasS = 1 << 0,
-};
-
-typedef struct DecodeParams
-{
-	DecodeKind kind;
-	DecodeFlags flags;
-} DecodeParams;
-
 global thread_local bool decoder_table_initialized;
 global thread_local DecodeParams decode_params[256];
 global thread_local u8 instruction_kinds[256];
-
-typedef struct Pattern
-{
-	u8 b1, b1_mask;
-	Mnemonic mnemonic;
-	DecodeKind decoder;
-	Flags decode_flags;
-} Pattern;
 
 function void RegisterPattern(Pattern *pattern)
 {
@@ -73,41 +27,6 @@ function void RegisterPattern(Pattern *pattern)
 		}
 	}
 }
-
-global Pattern patterns[] =
-{
-	{ .b1 = 0b10001000, .b1_mask = 0b11111100, .mnemonic = MOV,           .decoder = Decode_RegMemToFromReg                                  },
-	{ .b1 = 0b11000110, .b1_mask = 0b11111110, .mnemonic = MOV,           .decoder = Decode_ImmToRegMem                                      },
-	{ .b1 = 0b10110000, .b1_mask = 0b11110000, .mnemonic = MOV,           .decoder = Decode_ImmToReg                                         },
-	{ .b1 = 0b10100000, .b1_mask = 0b11111110, .mnemonic = MOV,           .decoder = Decode_MemToAccum                                       },
-	{ .b1 = 0b10100010, .b1_mask = 0b11111110, .mnemonic = MOV,           .decoder = Decode_AccumToMem                                       },
-
-	{ .b1 = 0b00000000, .b1_mask = 0b11000100, .mnemonic = Mnemonic_None, .decoder = Decode_RegMemToFromReg                                  },
-	{ .b1 = 0b10000000, .b1_mask = 0b11111100, .mnemonic = Mnemonic_None, .decoder = Decode_ImmToRegMem,    .decode_flags = DecoderFlag_HasS },
-	{ .b1 = 0b00000100, .b1_mask = 0b11000110, .mnemonic = Mnemonic_None, .decoder = Decode_ImmToAccum                                       },
-
-	{ .b1 = 0b01110000, .b1_mask = 0b11111111, .mnemonic = JO,            .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b01110001, .b1_mask = 0b11111111, .mnemonic = JNO,           .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b01110010, .b1_mask = 0b11111111, .mnemonic = JB,            .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b01110011, .b1_mask = 0b11111111, .mnemonic = JAE,           .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b01110100, .b1_mask = 0b11111111, .mnemonic = JE,            .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b01110101, .b1_mask = 0b11111111, .mnemonic = JNE,           .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b01110110, .b1_mask = 0b11111111, .mnemonic = JBE,           .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b01110111, .b1_mask = 0b11111111, .mnemonic = JA,            .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b01111000, .b1_mask = 0b11111111, .mnemonic = JS,            .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b01111001, .b1_mask = 0b11111111, .mnemonic = JNS,           .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b01111010, .b1_mask = 0b11111111, .mnemonic = JP,            .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b01111011, .b1_mask = 0b11111111, .mnemonic = JPO,           .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b01111100, .b1_mask = 0b11111111, .mnemonic = JL,            .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b01111101, .b1_mask = 0b11111111, .mnemonic = JGE,           .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b01111110, .b1_mask = 0b11111111, .mnemonic = JLE,           .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b01111111, .b1_mask = 0b11111111, .mnemonic = JG,            .decoder = Decode_JumpIpInc8                                       },
-
-	{ .b1 = 0b11100000, .b1_mask = 0b11111111, .mnemonic = LOOPNE,        .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b11100001, .b1_mask = 0b11111111, .mnemonic = LOOPE,         .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b11100010, .b1_mask = 0b11111111, .mnemonic = LOOP,          .decoder = Decode_JumpIpInc8                                       },
-	{ .b1 = 0b11100011, .b1_mask = 0b11111111, .mnemonic = JCXZ,          .decoder = Decode_JumpIpInc8                                       },
-};
 
 function void InitializeDecoderTable(void)
 {
@@ -191,7 +110,7 @@ function u16 ReadUx(Decoder *decoder, u8 w)
 	return w ? DecoderReadU16(decoder) : DecoderReadU8(decoder);
 }
 
-function s16 DecoderReadSx(Decoder *decoder, u8 w)
+function s16 DecoderReadSX(Decoder *decoder, u8 w)
 {
 	return w ? DecoderReadS16(decoder) : DecoderReadS8(decoder);
 }
@@ -226,7 +145,27 @@ function Operand DecodeRegister(u8 w, u8 reg)
 	return result;
 }
 
-function Operand DecodeEffectiveAddress(u8 mod, u8 w, u8 r_m, s16 disp)
+function Operand OperandFromRegister(Register reg)
+{
+	Operand result =
+	{
+		.kind = reg >= ES ? Operand_SegReg : Operand_Reg,
+		.reg  = reg,
+	};
+	return result;
+}
+
+function Operand DecodeSegmentRegister(u8 seg_reg)
+{
+	Operand result =
+	{
+		.kind = Operand_SegReg,
+		.reg  = ES + seg_reg,
+	};
+	return result;
+}
+
+function Operand DecodeEffectiveAddress(Decoder *decoder, u8 mod, u8 w, u8 r_m)
 {
 	Operand result = { 0 };
 
@@ -239,7 +178,7 @@ function Operand DecodeEffectiveAddress(u8 mod, u8 w, u8 r_m, s16 disp)
 		result.kind = Operand_Mem;
 		EffectiveAddress *ea = &result.mem;
 
-		ea->disp = disp;
+		ea->disp = DecoderReadDisp(decoder, mod, r_m);
 		if (!(mod == 0x0 && r_m == 0x6))
 		{
 			ea->reg1 = eac_register_table[r_m].reg1;
@@ -247,6 +186,19 @@ function Operand DecodeEffectiveAddress(u8 mod, u8 w, u8 r_m, s16 disp)
 		}
 	}
 
+	return result;
+}
+
+function Operand OperandFromAddress(u16 address)
+{
+	Operand result =
+	{
+		.kind = Operand_Mem,
+		.mem =
+		{
+			.disp = (s16)address,
+		},
+	};
 	return result;
 }
 
@@ -271,31 +223,21 @@ function bool DecodeNextInstruction(Decoder *decoder, Instruction *inst)
 		{
 			u8 w = b1 & 0x1;
 
-			inst->dst.kind     = Operand_Reg;
-			inst->dst.reg      = w ? AX : AL;
-
-			inst->src.kind     = Operand_Mem;
-			inst->src.mem.disp = DecoderReadS16(decoder);
-
-			if (w) inst->flags |= W;
+			inst->op1 = OperandFromRegister(w ? AX : AL);
+			inst->op2 = OperandFromAddress(DecoderReadU16(decoder));
 		} break;
 
 		case Decode_AccumToMem:
 		{
 			u8 w = b1 & 0x1;
 
-			inst->dst.kind     = Operand_Mem;
-			inst->dst.mem.disp = DecoderReadS16(decoder);
-
-			inst->src.kind     = Operand_Reg;
-			inst->src.reg      = w ? AX : AL;
-
-			if (w) inst->flags |= W;
+			inst->op1 = OperandFromAddress(DecoderReadU16(decoder));
+			inst->op2 = OperandFromRegister(w ? AX : AL);
 		} break;
 
 		case Decode_RegMemToFromReg:
 		{
-			if (!inst->mnemonic)
+			if (inst->mnemonic == Mnemonic_Immed)
 			{
 				u8 op = (b1 >> 3) & 0x7;
 				inst->mnemonic = immed_table[op];
@@ -310,27 +252,22 @@ function bool DecodeNextInstruction(Decoder *decoder, Instruction *inst)
 			u8 reg = (b2 >> 3) & 0x7;
 			u8 r_m = (b2 >> 0) & 0x7;
 
-			s16 disp = DecoderReadDisp(decoder, mod, r_m);
-
 			if (d)
 			{
-				inst->dst = DecodeRegister(w, reg);
-				inst->src = DecodeEffectiveAddress(mod, w, r_m, disp);
+				inst->op1 = DecodeRegister(w, reg);
+				inst->op2 = DecodeEffectiveAddress(decoder, mod, w, r_m);
 			}
 			else
 			{
-				inst->dst = DecodeEffectiveAddress(mod, w, r_m, disp);
-				inst->src = DecodeRegister(w, reg);
+				inst->op1 = DecodeEffectiveAddress(decoder, mod, w, r_m);
+				inst->op2 = DecodeRegister(w, reg);
 			}
-
-			if (w) inst->flags |= W;
-			if (d) inst->flags |= D;
 		} break;
 
 		case Decode_ImmToRegMem:
 		{
 			u8 s = 0;
-			if (params->flags & DecoderFlag_HasS)
+			if (params->flags & S)
 			{
 				s = (b1 >> 1) & 0x1;
 			}
@@ -339,7 +276,7 @@ function bool DecodeNextInstruction(Decoder *decoder, Instruction *inst)
 
 			u8 b2 = DecoderReadU8(decoder);
 
-			if (!inst->mnemonic)
+			if (inst->mnemonic == Mnemonic_Immed)
 			{
 				u8 op = (b2 >> 3) & 0x7;
 				inst->mnemonic = immed_table[op];
@@ -348,8 +285,7 @@ function bool DecodeNextInstruction(Decoder *decoder, Instruction *inst)
 			u8 mod = (b2 >> 6) & 0x3;
 			u8 r_m = (b2 >> 0) & 0x7;
 
-			s16 disp = DecoderReadDisp(decoder, mod, r_m);
-			inst->dst = DecodeEffectiveAddress(mod, w, r_m, disp);
+			inst->op1 = DecodeEffectiveAddress(decoder, mod, w, r_m);
 
 			s16 data;
 			if (s)
@@ -361,10 +297,7 @@ function bool DecodeNextInstruction(Decoder *decoder, Instruction *inst)
 				data = ReadUx(decoder, w);
 			}
 
-			InstSetData(inst, data);
-
-			if (w) inst->flags |= W;
-			if (s) inst->flags |= S;
+			InstSetDataX(inst, s || w, data);
 		} break;
 
 		case Decode_ImmToReg:
@@ -372,37 +305,81 @@ function bool DecodeNextInstruction(Decoder *decoder, Instruction *inst)
 			u8 w   = (b1 >> 3) & 0x1;
 			u8 reg = (b1 >> 0) & 0x7;
 
-			inst->dst = DecodeRegister(w, reg);
+			inst->op1 = DecodeRegister(w, reg);
 
-			s16 data = DecoderReadSx(decoder, w);
-			InstSetData(inst, data);
-
-			if (w) inst->flags |= W;
+			s16 data = DecoderReadSX(decoder, w);
+			InstSetDataX(inst, w, data);
 		} break;
 
 		case Decode_ImmToAccum:
 		{
 			u8 w = (b1 >> 0) & 0x1;
 
-			if (!inst->mnemonic)
+			if (inst->mnemonic == Mnemonic_Immed)
 			{
 				u8 op = (b1 >> 3) & 0x7;
 				inst->mnemonic = immed_table[op];
 			}
 
-			inst->dst.kind = Operand_Reg;
-			inst->dst.reg  = w ? AX : AL;
+			inst->op1 = OperandFromRegister(w ? AX : AL);
 
-			s16 data = DecoderReadSx(decoder, w);
-			InstSetData(inst, data);
-
-			if (w) inst->flags |= W;
+			s16 data = DecoderReadSX(decoder, w);
+			InstSetDataX(inst, w, data);
 		} break;
 
 		case Decode_JumpIpInc8:
 		{
 			s8 ip_inc8 = DecoderReadS8(decoder);
-			InstSetData(inst, ip_inc8);
+			InstSetData16(inst, ip_inc8); // 16 because I want it sign extended
+		} break;
+
+		case Decode_Reg:
+		{
+			u8 reg = b1 & 0x7;
+			inst->op1 = DecodeRegister(1, reg);
+		} break;
+
+		case Decode_RegAccum:
+		{
+			u8 reg = b1 & 0x7;
+			inst->op1 = OperandFromRegister(AX);
+			inst->op2 = DecodeRegister(1, reg);
+		} break;
+
+		case Decode_SegReg:
+		{
+			u8 seg_reg = (b1 >> 3) & 0x3;
+			inst->op1 = DecodeSegmentRegister(seg_reg);
+		} break;
+
+		case Decode_RegMem:
+		{
+			u8 b2 = DecoderReadU8(decoder);
+
+			if (inst->mnemonic == Mnemonic_Grp2)
+			{
+				u8 op = (b2 >> 3) & 0x7;
+				inst->mnemonic = grp2_table[op];
+			}
+
+			u8 mod = (b2 >> 6) & 0x3;
+			u8 r_m = (b2 >> 0) & 0x7;
+
+			inst->op1 = DecodeEffectiveAddress(decoder, mod, 1, r_m);
+		} break;
+
+		case Decode_IOFixedPort:
+		{
+			u8 w = b1 & 0x1;
+			inst->op1 = OperandFromRegister(w ? AX : AL);
+			InstSetData8(inst, DecoderReadU8(decoder));
+		} break;
+
+		case Decode_IOVariablePort:
+		{
+			u8 w = b1 & 0x1;
+			inst->op1 = OperandFromRegister(w ? AX : AL);
+			inst->op2 = OperandFromRegister(DX);
 		} break;
 
 		default:

@@ -1,78 +1,79 @@
+#define MNEMONICS(_)   \
+	_(ADD)             \
+	_(MOV)             \
+	_(OR)              \
+	_(ADC)             \
+	_(SBB)             \
+	_(AND)             \
+	_(SUB)             \
+	_(XOR)             \
+	_(CMP)             \
+                       \
+	_(TEST)            \
+	_(NOT)             \
+	_(NEG)             \
+	_(MUL)             \
+	_(IMUL)            \
+	_(DIV)             \
+	_(IDIV)            \
+                       \
+	_(POP)             \
+                       \
+	_(INC)             \
+	_(DEC)             \
+	_(CALL)            \
+	_(JMP)             \
+	_(PUSH)            \
+                       \
+	_(JO)              \
+	_(JNO)             \
+	_(JB)              \
+	_(JAE)             \
+	_(JE)              \
+	_(JNE)             \
+	_(JBE)             \
+	_(JA)              \
+	_(JS)              \
+	_(JNS)             \
+	_(JP)              \
+	_(JPO)             \
+	_(JL)              \
+	_(JGE)             \
+	_(JLE)             \
+	_(JG)              \
+                       \
+	_(LOOPNE)          \
+	_(LOOPE)           \
+	_(LOOP)            \
+	_(JCXZ)            \
+	_(XCHG)            \
+	                   \
+	_(IN)              \
+	_(OUT)             \
+
+#define Mnemonic(name) name,
+
 typedef u8 Mnemonic;
 enum Mnemonic
 {
 	Mnemonic_None,
 
-	ADD,
-	MOV,
-	OR,
-	ADC,
-	SBB,
-	AND,
-	SUB,
-	XOR,
-	CMP,
+	MNEMONICS(Mnemonic)
 
-	JO,
-	JNO,
-	JB,
-	JAE,
-	JE,
-	JNE,
-	JBE,
-	JA,
-	JS,
-	JNS,
-	JP,
-	JPO,
-	JL,
-	JGE,
-	JLE,
-	JG,
-
-	LOOPNE,
-	LOOPE,
-	LOOP,
-	JCXZ,
+	// These are only used for signalling to the decoder
+	Mnemonic_Immed,
+	Mnemonic_Grp,
+	Mnemonic_Grp2,
 
 	Mnemonic_Count,
 };
 
+#define mnemonic_names(name) [name] = StringLitConst(#name),
+
 global String mnemonic_names[Mnemonic_Count] =
 {
-	[Mnemonic_None] = StringLitConst("invalid mnemonic"),
-
-	[ADD]    = StringLitConst("add"),
-	[MOV]    = StringLitConst("mov"),
-	[OR]     = StringLitConst("or"),
-	[ADC]    = StringLitConst("adc"),
-	[SBB]    = StringLitConst("sbb"),
-	[AND]    = StringLitConst("and"),
-	[SUB]    = StringLitConst("sub"),
-	[XOR]    = StringLitConst("xor"),
-	[CMP]    = StringLitConst("cmp"),
-
-	[JO]     = StringLitConst("jo"),
-	[JNO]    = StringLitConst("jno"),
-	[JB]     = StringLitConst("jb"),
-	[JAE]    = StringLitConst("jae"),
-	[JE]     = StringLitConst("je"),
-	[JNE]    = StringLitConst("jne"),
-	[JBE]    = StringLitConst("jbe"),
-	[JA]     = StringLitConst("ja"),
-	[JS]     = StringLitConst("js"),
-	[JNS]    = StringLitConst("jns"),
-	[JP]     = StringLitConst("jp"),
-	[JPO]    = StringLitConst("jpo"),
-	[JL]     = StringLitConst("jl"),
-	[JGE]    = StringLitConst("jge"),
-	[JLE]    = StringLitConst("jle"),
-	[JG]     = StringLitConst("jg"),
-
-	[LOOPNE] = StringLitConst("loopne"),
-	[LOOPE]  = StringLitConst("loope"),
-	[LOOP]   = StringLitConst("loop"),
-	[JCXZ]   = StringLitConst("jcxz"),
+	[Mnemonic_None] = StringLitConst("<null mnemonic>"),
+	MNEMONICS(mnemonic_names)
 };
 
 typedef u8 Flags;
@@ -84,7 +85,8 @@ enum Flags
 	V = 1 << 3,
 	Z = 1 << 4,
 
-	InstructionFlag_HasData = 1 << 5,
+	InstructionFlag_DataLO = 1 << 5,
+	InstructionFlag_DataHI = 1 << 6,
 };
 
 typedef u8 Register;
@@ -93,6 +95,7 @@ enum Register
 	Reg_None,
 	AL, CL, DL, BL, AH, CH, DH, BH,
 	AX, CX, DX, BX, SP, BP, SI, DI,
+	ES, CS, SS, DS,
 };
 
 global String register_names[] =
@@ -116,6 +119,11 @@ global String register_names[] =
 	StringLitConst("bp"),
 	StringLitConst("si"),
 	StringLitConst("di"),
+
+	StringLitConst("es"), 
+	StringLitConst("cs"), 
+	StringLitConst("ss"), 
+	StringLitConst("ds"),
 };
 
 typedef struct EffectiveAddress
@@ -145,7 +153,9 @@ global RegisterPair eac_register_table[] =
 typedef u8 OperandKind;
 enum OperandKind
 {
+	Operand_None,
 	Operand_Reg,
+	Operand_SegReg,
 	Operand_Mem,
 };
 
@@ -162,25 +172,43 @@ typedef struct Operand
 typedef struct Instruction
 {
 	Mnemonic mnemonic;
-	Operand dst;
-	Operand src;
+	Operand op1;
+	Operand op2;
 	Flags flags;
 	union
 	{
 		struct
 		{
-			s8 data_lo;
+			u8 data_lo;
 			u8 data_hi;
 		};
 		s16 data;
 	};
-
 	u32 source_byte_offset;
 	u32 source_byte_count;
 } Instruction;
 
-function void InstSetData(Instruction *inst, s16 data)
+function void InstSetData8(Instruction *inst, u8 data)
+{
+	inst->data_lo = data;
+	inst->data_hi = 0;
+	inst->flags |= InstructionFlag_DataLO;
+}
+
+function void InstSetData16(Instruction *inst, s16 data)
 {
 	inst->data = data;
-	inst->flags |= InstructionFlag_HasData;
+	inst->flags |= InstructionFlag_DataLO|InstructionFlag_DataHI;
+}
+
+function void InstSetDataX(Instruction *inst, u8 w, s16 data)
+{
+	if (w)
+	{
+		InstSetData16(inst, data);
+	}
+	else
+	{
+		InstSetData8(inst, (u8)data);
+	}
 }
